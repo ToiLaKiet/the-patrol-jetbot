@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Patrol Jetbot - Monitoring & Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3v18M3 12h18"/>
+          <circle cx="12" cy="12" r="3" fill="#38bdf8"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="project-title">THE PATROL JETBOT <span class="badge-v1">v1.0</span></h1>
+        <p class="subtitle">Teach & Repeat Security Patrol Robot &bull; Backend & Telemetry Center</p>
+      </div>
+    </div>
+
+    <!-- Status Hub -->
+    <div class="status-hub">
+      <div class="status-chip" id="connection-chip">
+        <span class="status-dot disconnected" id="conn-dot"></span>
+        <span id="conn-text">Connecting...</span>
+      </div>
+
+      <div class="status-chip mode-chip" id="mode-chip">
+        <span class="label">MODE:</span>
+        <span class="mode-val" id="mode-val">IDLE</span>
+      </div>
+
+      <div class="status-chip">
+        <span class="label">BATT:</span>
+        <div class="battery-bar-container">
+          <div class="battery-bar" id="battery-bar" style="width: 100%;"></div>
+        </div>
+        <span class="battery-val" id="battery-val">--%</span>
+      </div>
+
+      <div class="status-chip">
+        <span class="label">WIFI:</span>
+        <span id="wifi-val">-50 dBm</span>
+      </div>
+
+      <button class="btn-estop" id="btn-top-estop" title="Emergency Stop">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+        </svg>
+        E-STOP
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Grid -->
+  <main class="dashboard-grid">
+    <!-- Left Column: Video & Teleop -->
+    <section class="grid-col left-col">
+      <!-- Live Video Feed -->
+      <div class="card video-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="pulse-red"></span>
+            <h2>Live Camera Stream (JetBot RGB)</h2>
+          </div>
+          <span class="tag tag-blue" id="stream-fps">MJPEG Stream</span>
+        </div>
+        <div class="video-container">
+          <img id="camera-stream" src="/api/v1/video/stream" alt="JetBot Live Stream" onerror="this.src='/api/v1/video/frame'">
+          <div class="video-hud" id="video-hud">
+            <span>POSE: X=<b id="hud-x">0.00</b>m Y=<b id="hud-y">0.00</b>m</span>
+            <span>SPEED: <b id="hud-spd">0.00</b> m/s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teleoperation Controls -->
+      <div class="card teleop-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h2>Manual Teleoperation</h2>
+          </div>
+          <span class="keyboard-hint">Keyboard: W, A, S, D or Arrows | Space: STOP</span>
+        </div>
+        <div class="teleop-body">
+          <div class="dpad-grid">
+            <button class="dpad-btn btn-up" id="btn-fwd" title="Forward (W)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
+            <button class="dpad-btn btn-left" id="btn-left" title="Left (A)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="dpad-btn btn-stop" id="btn-stop" title="Stop (Space)">STOP</button>
+            <button class="dpad-btn btn-right" id="btn-right" title="Right (D)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button class="dpad-btn btn-down" id="btn-back" title="Backward (S)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+
+          <div class="teleop-settings">
+            <div class="slider-group">
+              <label for="speed-slider">Drive Speed: <span id="speed-label">0.40</span></label>
+              <input type="range" id="speed-slider" min="0.1" max="1.0" step="0.05" value="0.4">
+            </div>
+
+            <!-- Quick Simulator Action Trigger Buttons -->
+            <div class="sim-triggers">
+              <h4>Simulator Actions:</h4>
+              <div class="btn-group-sm">
+                <button class="btn btn-outline-warning" id="sim-obstacle-btn">⚠️ Trigger Obstacle</button>
+                <button class="btn btn-outline-danger" id="sim-person-btn">🚨 Trigger Person</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Routes, Patrol & Security Events -->
+    <section class="grid-col right-col">
+      <!-- Route Management (Teach Mode) -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <h2>Route Management (Teach Mode)</h2>
+          </div>
+          <div class="teach-controls">
+            <button class="btn btn-primary" id="btn-start-record">Record New Route</button>
+            <button class="btn btn-danger hidden" id="btn-stop-record">Finish & Save</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="recording-banner" class="recording-banner hidden">
+            <span class="pulse-red"></span>
+            <span>Recording Active Route: <b id="rec-route-name">...</b> | Checkpoints: <b id="rec-cp-count">0</b></span>
+          </div>
+
+          <div class="route-list-header">
+            <h4>Saved Patrol Routes:</h4>
+            <button class="btn-icon" id="btn-refresh-routes" title="Refresh">↻</button>
+          </div>
+          <div class="route-table-container">
+            <table class="data-table" id="routes-table">
+              <thead>
+                <tr>
+                  <th>Route Name</th>
+                  <th>Checkpoints</th>
+                  <th>Distance</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="routes-tbody">
+                <tr><td colspan="5" class="text-muted">Loading routes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Autonomous Patrol (Repeat Mode) -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <h2>Autonomous Patrol (Repeat Mode)</h2>
+          </div>
+          <div id="active-patrol-actions" class="hidden">
+            <button class="btn btn-warning btn-sm" id="btn-pause-patrol">Pause</button>
+            <button class="btn btn-primary btn-sm hidden" id="btn-resume-patrol">Resume</button>
+            <button class="btn btn-outline-danger btn-sm" id="btn-stop-patrol">Abort</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="patrol-status-box" id="patrol-status-box">
+            <div class="patrol-info-row">
+              <span>Active Route: <b id="patrol-route-name">None</b></span>
+              <span>Status: <span class="badge" id="patrol-status-badge">IDLE</span></span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar" id="patrol-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="patrol-stats-row">
+              <span>Progress: <b id="patrol-pct">0%</b></span>
+              <span>Checkpoint: <b id="patrol-cp-val">0 / 0</b></span>
+              <span>Obstacles: <b id="patrol-obs-count">0</b></span>
+              <span>Persons: <b id="patrol-person-count">0</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security & Obstacle Event Feed -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <h2>Security & Obstacle Alert Log</h2>
+          </div>
+          <button class="btn-icon" id="btn-refresh-events" title="Refresh Events">↻</button>
+        </div>
+        <div class="card-body">
+          <div class="event-feed-container">
+            <table class="data-table" id="events-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Time</th>
+                  <th>Description</th>
+                  <th>Snapshot</th>
+                </tr>
+              </thead>
+              <tbody id="events-tbody">
+                <tr><td colspan="4" class="text-muted">Loading events...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for Snapshot Image Preview -->
+  <div class="modal hidden" id="snapshot-modal">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Security Event Snapshot</h3>
+        <button class="btn-close" id="btn-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <img id="modal-img" src="" alt="Snapshot Frame">
+        <p id="modal-desc" class="modal-desc"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
