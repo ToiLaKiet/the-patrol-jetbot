@@ -1,0 +1,13 @@
+[project]
+name = "patrol-jetbot-robot"
+version = "0.1.0"
+requires-python = ">=3.8,<3.9"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pyyaml",
+    "rospkg",
+]
+
+# Install torch, torchvision, efficientnet-pytorch, and warmup-scheduler separately for the Jetson's JetPack version.
+# Generic PyPI wheels may not support the Jetson GPU.
