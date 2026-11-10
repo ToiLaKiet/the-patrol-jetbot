@@ -54,6 +54,16 @@ class JetMotors:
     def stop(self):
         self.robot.stop()
 
+    def set_motors(self, left: float, right: float):
+        try:
+            if not all(math.isfinite(x) for x in (left, right)):
+                raise ValueError("Motor commands must be finite")
+            scale = max(1.0, abs(left) / self.max_duty, abs(right) / self.max_duty)
+            self.robot.set_motors(left / scale, right / scale)
+        except Exception:
+            self.stop()
+            raise
+
     # =========================
     # Velocity Conversion
     # =========================
