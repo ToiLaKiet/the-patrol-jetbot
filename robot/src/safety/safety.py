@@ -4,8 +4,6 @@ Quy tắc (theo thứ tự ưu tiên): dừng khẩn cấp · watchdog (không c
 · mất camera khi skill cần camera · giới hạn tốc độ.
 Mỗi lần chặn đều có `reason` để hiện lên dashboard và ghi log.
 """
-from __future__ import annotations
-
 from dataclasses import dataclass
 import math
 from typing import Optional

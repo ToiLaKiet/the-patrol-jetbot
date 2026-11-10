@@ -62,8 +62,10 @@ Thay `max_speed` trong `src/main.py` để đổi giới hạn công suất. Khi
 
 ## Kết nối và mapping đã xác nhận
 
-Jetson đã nhận TGZ trong môi trường uv: Python 3.8.20, Pygame 2.6.1,
-SDL 2.28.4, 6 axes và 15 buttons. Đặt các biến sau trước khi khởi tạo SDL:
+Trước khi đổi môi trường, Jetson đã nhận TGZ bằng Python 3.8.20, Pygame 2.6.1,
+SDL 2.28.4, 6 axes và 15 buttons. Dự án hiện dùng Python 3.6.9 theo JetPack 4.5;
+cần xác nhận lại tay cầm sau khi tạo lại `.venv` theo `robot/README.md`.
+Đặt các biến sau trước khi khởi tạo SDL:
 
 ```python
 import os

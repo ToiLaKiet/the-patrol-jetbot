@@ -5,9 +5,10 @@ import sys
 
 
 CHECKS = (
-    ("JetBot package", "from importlib.metadata import version; print(version('jetbot'))"),
+    ("JetBot package", "from importlib_metadata import version; print(version('jetbot'))"),
     ("NumPy", "import numpy"),
     ("OpenCV", "import cv2"),
+    ("Pygame / SDL", "import pygame; print(pygame.get_sdl_version())"),
     ("traitlets", "import traitlets"),
     ("ipywidgets", "import ipywidgets.widgets"),
     ("ZeroMQ", "import zmq"),
@@ -21,7 +22,7 @@ CHECKS = (
      "assert Gst.ElementFactory.find('nvjpegenc') is not None, 'Missing nvjpegenc plugin'"),
     ("TensorRT", "import tensorrt"),
     ("PyTorch", "import torch"),
-    ("JetBot TensorRT plugin", "import ctypes; from importlib.metadata import distribution; "
+    ("JetBot TensorRT plugin", "import ctypes; from importlib_metadata import distribution; "
      "ctypes.CDLL(str(distribution('jetbot').locate_file('jetbot/ssd_tensorrt/libssd_tensorrt.so')))"),
 )
 
@@ -29,7 +30,8 @@ CHECKS = (
 def check(name, code):
     try:
         result = subprocess.run(
-            [sys.executable, "-c", code], capture_output=True, text=True, timeout=30,
+            [sys.executable, "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=30,
         )
     except subprocess.TimeoutExpired:
         print(f"FAIL {name}: timeout sau 30 giây", flush=True)

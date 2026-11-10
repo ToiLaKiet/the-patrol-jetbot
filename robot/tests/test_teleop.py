@@ -115,8 +115,8 @@ class TeleopTests(unittest.TestCase):
                          {"y": -1, "enabled": True}, {"y": -1}])
         writes = self.motors.set_motors.call_args_list
         self.assertEqual(len(writes), 2)
-        self.assertAlmostEqual(writes[0].args[0], 0.01)
-        self.assertAlmostEqual(writes[1].args[0], 0.02)
+        self.assertAlmostEqual(writes[0][0][0], 0.01)
+        self.assertAlmostEqual(writes[1][0][0], 0.02)
         self.assertEqual(self.motors.mock_calls[-1][0], "stop")
         self.fake_pygame.quit.assert_called_once()
 

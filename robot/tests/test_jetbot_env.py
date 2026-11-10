@@ -17,7 +17,7 @@ class EnvironmentCheckTests(unittest.TestCase):
         self.assertEqual(run.call_count, len(check_jetbot_env.CHECKS))
         for name, _ in check_jetbot_env.CHECKS:
             self.assertIn("FAIL " + name, output.getvalue())
-        self.assertTrue(all(call.args[0][0] == check_jetbot_env.sys.executable
+        self.assertTrue(all(call[0][0][0] == check_jetbot_env.sys.executable
                             for call in run.call_args_list))
 
     def test_checks_full_import_after_prerequisites_pass(self):
@@ -26,7 +26,7 @@ class EnvironmentCheckTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(check_jetbot_env.main(), 0)
         self.assertEqual(run.call_count, len(check_jetbot_env.CHECKS) + 1)
-        self.assertIn("import jetbot", run.call_args.args[0][-1])
+        self.assertIn("import jetbot", run.call_args[0][0][-1])
 
     def test_timeout_and_native_import_errors_are_failures(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -36,6 +36,15 @@ class EnvironmentCheckTests(unittest.TestCase):
             with patch.object(check_jetbot_env.subprocess, "run",
                               return_value=Mock(returncode=-11, stderr="native crash", stdout="")):
                 self.assertFalse(check_jetbot_env.check("TensorRT", "import tensorrt"))
+
+    def test_inference_is_required_by_original_jetbot(self):
+        result = Mock(returncode=0, stdout="", stderr="")
+        with patch.object(check_jetbot_env.subprocess, "run", return_value=result) as run, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(check_jetbot_env.main(), 0)
+        commands = [call[0][0][-1] for call in run.call_args_list]
+        self.assertIn("import torch", commands)
+        self.assertIn("import tensorrt", commands)
 
 
 if __name__ == "__main__":
