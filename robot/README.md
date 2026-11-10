@@ -58,8 +58,18 @@ uv run --no-sync python -c "import sys, pygame; print(sys.executable); print(pyg
 ```
 
 `--inexact` preserves separately installed Jetson packages such as PyTorch.
-Run controller scripts with `uv run --no-sync python check_controller.py`
-if the script is saved in this directory.
+Check the connected controller and its axis/button mapping without running
+the motors:
+
+```sh
+uv run --no-sync python check_controller.py
+```
+
+The script enables SDL's classic Linux joystick interface, required to detect
+the TGZ Controller on this Jetson, and supports running over SSH. Push the left
+stick up and right, then press and release L1. Record the printed axis indices,
+signs, and button index; do not assume the mapping matches `jstest`.
+Press Ctrl+C to exit. Disconnecting the controller ends the check with an error.
 
 Linux utilities and native build dependencies are system packages, outside
 uv. To test the controller without Python:
