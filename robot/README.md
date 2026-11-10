@@ -50,32 +50,61 @@ verified on the target device.
 
 The project installs NVIDIA's official `jetbot` v0.4.3 from Git on Linux
 ARM64 (`aarch64`), including its Adafruit motor/display dependencies.
-`traitlets`, used by JetBot but missing from its upstream dependency metadata,
-is also a project dependency. `uv.lock` pins the Git commit. Other platforms
-skip the hardware package so development and mock-based tests can run there.
+`uv.lock` pins the Git commit. Other platforms skip the hardware package so
+development and mock-based tests can run there.
+
+The v0.4.3 source was audited beyond its incomplete `setup.py`. The project
+also declares the runtime dependencies used by the following components:
+
+| JetBot component | Python dependency managed by uv |
+| --- | --- |
+| Motor and camera configuration | `traitlets` |
+| Heartbeat, imported even for motor-only use | `ipywidgets` and its widget/IPython dependencies |
+| Camera/image functions | `numpy`, `opencv-python-headless` |
+| JPEG encoder | `PyGObject==3.42.2` (`gi`), transitively `pycairo` and `cffi` |
+| ZMQ camera | `pyzmq>=22,<26` |
+| OLED stats images | `pillow` |
+| Service helpers using `pkg_resources` | `setuptools<81` |
+| I2C motor/display drivers | `Adafruit-MotorHAT`, `Adafruit-SSD1306`, transitively `Adafruit-GPIO`, `Adafruit-PureIO` |
+
+PyGObject is pinned to a release supporting GLib 2.56 and GI 1.56 from Ubuntu
+18.04. ZeroMQ is constrained to a series providing Python 3.8/ARM64 wheels for
+the older glibc on this Jetson.
+
+Install native build prerequisites once, before syncing on JetPack 4.5:
+
+```sh
+sudo apt update
+sudo apt install git cmake build-essential pkg-config libgirepository1.0-dev libcairo2-dev libglib2.0-dev libffi-dev gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+```
+
+These are native system libraries/tools, not Python packages. C extension
+builds also need headers matching the environment's Python 3.8; Python 3.6
+development headers do not substitute for them. NVIDIA's `nvjpegenc` plugin,
+CUDA and TensorRT libraries must come from the compatible JetPack installation
+in the same host/container where uv runs.
 
 After pulling the updated repository, run from `robot/` on the Jetson:
 
 ```sh
 uv sync --locked --inexact
-uv run --no-sync python -c "import jetbot; print(jetbot.__file__)"
+uv run --no-sync python check_jetbot_env.py
 ```
 
-The import check does not instantiate the robot or send motor commands.
-Only after it succeeds, test teleop with the wheels raised:
+The checker reports every failing prerequisite in one run, including native
+imports, the NVIDIA JPEG plugin, and JetBot's compiled TensorRT plugin. Only
+when all prerequisites pass does it try the full JetBot import, in a child
+process. Upstream `import jetbot` creates a JPEG encoder/GStreamer pipeline;
+the checker never instantiates `Robot` or sends motor commands.
+It exits nonzero on failures. Only after it succeeds, test teleop with the
+wheels raised:
 
 ```sh
 uv run --no-sync python src/main.py
 ```
 
 JetBot's upstream installer invokes CMake and Make to build a CUDA/TensorRT
-plugin, even when only using motors. If the build tools are missing, install
-the native tools with apt, then retry syncing:
-
-```sh
-sudo apt update
-sudo apt install git cmake build-essential
-```
+plugin, even when only using motors.
 
 CUDA and TensorRT development libraries must be available in the environment
 where uv runs. JetBot also imports OpenCV, TensorRT and PyTorch through its
@@ -95,8 +124,26 @@ accordingly. Do not install multiple OpenCV distributions exposing `cv2` in
 the same environment.
 
 TensorRT and the Jetson-specific PyTorch build are not installed automatically
-from PyPI. Installing OpenCV alone does not validate the full JetBot import.
-Check the native Python imports with:
+from PyPI. Their wheels must match Python 3.8, ARM64, CUDA 10.2 and the installed
+JetPack/TensorRT version. A generic current `tensorrt` or `torch` dependency
+does not select that combination. No compatible wheel URLs have been verified
+for this device, so the TOML deliberately does not claim to provision them.
+For the older TensorRT 7.1.3 Jetson stack, NVIDIA supplied Python 3.6 bindings;
+other Python versions require a compatible custom build:
+https://forums.developer.nvidia.com/t/using-tensorrt-7-1-3-jetpack4-4-with-python3-7-instead-of-3-6-how/179717/5
+
+Installing these wheels after obtaining compatible builds uses the project
+environment too:
+
+```sh
+uv pip install /path/to/compatible-tensorrt-wheel.whl /path/to/compatible-torch-wheel.whl
+```
+
+These paths are placeholders, not downloadable artifacts. Preserve externally
+installed builds with `uv sync --inexact`. Once verified wheel locations are
+available, they can be recorded as explicit uv sources. Until then, the checker
+may still report TensorRT/PyTorch as blockers; syncing alone is not a complete
+working JetBot environment. Check just these imports with:
 
 ```sh
 uv run --no-sync python -c "import cv2, tensorrt, torch; print('Native imports OK')"
@@ -113,6 +160,17 @@ machine. It does not skip the build during installation on the Jetson.
 Upstream does not reliably propagate CMake/Make failures, so successful
 `uv sync` alone is not proof that JetBot imports or its native plugin works.
 Python 3.8/JetPack compatibility still needs validation on the device.
+
+TensorFlow, UFF, GraphSurgeon, protobuf and the TensorFlow Object Detection API
+occur inside model-conversion helpers, not the runtime import path or teleop.
+They are outside this runtime setup. GPIO/SPI backends for Raspberry Pi,
+BeagleBone and FT232H are also outside the Jetson I2C motor path.
+
+Run the dependency-checker and teleop tests without hardware from `robot/`:
+
+```sh
+PYTHONPATH=src uv run --no-sync python -m unittest discover -s tests -v
+```
 
 ## USB gamepad
 
