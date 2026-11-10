@@ -13,7 +13,7 @@ provides CUDA 10.2, so CUDA 11 compatibility needs separate investigation.
 
    ```sh
    uv venv --python /path/to/python3.8 --system-site-packages
-   uv sync
+   uv sync --inexact
    ```
 
    Replace the path with the Python 3.8 interpreter. The system ROS packages
@@ -34,8 +34,8 @@ provides CUDA 10.2, so CUDA 11 compatibility needs separate investigation.
    ```
 
    These packages and the Jetson-specific PyTorch and torchvision builds are
-   outside the uv lockfile. Running `uv sync` again can remove them, so reinstall
-   them after syncing. Use `uv run --no-sync` to run code without syncing.
+   outside the uv lockfile. Use `uv sync --inexact` to preserve them when syncing.
+   Use `uv run --no-sync` to run code without syncing.
 5. Verify GPU access:
 
    ```sh
@@ -45,6 +45,59 @@ provides CUDA 10.2, so CUDA 11 compatibility needs separate investigation.
 JetPack supplies CUDA and other system libraries; uv does not install or
 replace them. Keep the Conda configuration until the uv environment has been
 verified on the target device.
+
+## JetBot hardware library
+
+The project installs NVIDIA's official `jetbot` v0.4.3 from Git on Linux
+ARM64 (`aarch64`), including its Adafruit motor/display dependencies.
+`traitlets`, used by JetBot but missing from its upstream dependency metadata,
+is also a project dependency. `uv.lock` pins the Git commit. Other platforms
+skip the hardware package so development and mock-based tests can run there.
+
+After pulling the updated repository, run from `robot/` on the Jetson:
+
+```sh
+uv sync --locked --inexact
+uv run --no-sync python -c "import jetbot; print(jetbot.__file__)"
+```
+
+The import check does not instantiate the robot or send motor commands.
+Only after it succeeds, test teleop with the wheels raised:
+
+```sh
+uv run --no-sync python src/main.py
+```
+
+JetBot's upstream installer invokes CMake and Make to build a CUDA/TensorRT
+plugin, even when only using motors. If the build tools are missing, install
+the native tools with apt, then retry syncing:
+
+```sh
+sudo apt update
+sudo apt install git cmake build-essential
+```
+
+CUDA and TensorRT development libraries must be available in the environment
+where uv runs. JetBot also imports OpenCV, TensorRT and PyTorch through its
+package initialization; those must work with the project's Python 3.8.
+These JetPack-specific libraries are not installed automatically from PyPI.
+Check the first native Python imports with:
+
+```sh
+uv run --no-sync python -c "import cv2, tensorrt, torch; print('Native imports OK')"
+```
+
+An existing JetBot installation in a Python 3.6 notebook, including one in a
+Docker container, is separate from this Python 3.8 environment. Making system
+packages visible does not make Python 3.6 binary extensions compatible with
+Python 3.8, or expose libraries from a different container.
+
+Static dependency metadata in `pyproject.toml` mirrors the v0.4.3 `setup.py`
+so generating the lockfile does not run the native build on a development
+machine. It does not skip the build during installation on the Jetson.
+Upstream does not reliably propagate CMake/Make failures, so successful
+`uv sync` alone is not proof that JetBot imports or its native plugin works.
+Python 3.8/JetPack compatibility still needs validation on the device.
 
 ## USB gamepad
 

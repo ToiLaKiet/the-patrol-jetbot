@@ -2,6 +2,52 @@ version = 1
 revision = 3
 requires-python = "==3.8.*"
 
+[manifest]
+
+[[manifest.dependency-metadata]]
+name = "jetbot"
+version = "0.4.3"
+requires-dist = ["adafruit-motorhat", "adafruit-ssd1306"]
+
+[[package]]
+name = "adafruit-gpio"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "adafruit-pureio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/1c/2dc8a674514219f287fa344e44cadfd77b3e2878d6ff602a8c2149b50dd8/Adafruit_GPIO-1.0.3.tar.gz", hash = "sha256:d6465b92c866c51ca8f3bc1e8f2ec36f5ccdb46d0fd54101c1109756d4a2dcd0", size = 24522, upload-time = "2017-06-06T18:44:52.234Z" }
+
+[[package]]
+name = "adafruit-motorhat"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "adafruit-gpio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/df/c0/36b16fb9ccbf614679dc73d77fa4f24306c71e2e4b0fa7804ec37f08cae1/Adafruit_MotorHAT-1.4.0.tar.gz", hash = "sha256:482c14c50d6a44f111eb117c7513bc70479c7a1f7ffbe6fe0f00cce2c15905ae", size = 4115, upload-time = "2017-05-31T21:59:03.868Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fd/45/c62877d4d55519bddbe2d46b3a85e6005554219220123f1eb251dba0d920/Adafruit_MotorHAT-1.4.0-py3-none-any.whl", hash = "sha256:ae8adb23a258c92eb64f07e5fae10867616f45514e846ddaa0d57fb48449a3be", size = 6041, upload-time = "2017-05-31T21:59:02.881Z" },
+]
+
+[[package]]
+name = "adafruit-pureio"
+version = "1.1.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/41/f4c4ae2523ad8a9c839e1814af8db068c33266a23c2d9908512cdbef0b96/adafruit_pureio-1.1.12.tar.gz", hash = "sha256:1ebb8416528ff710570fb0ad321fed885d50bec748cccd2935e9fd6b336c1d08", size = 35626, upload-time = "2026-09-24T19:44:08.974Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/6b/bd117a81d66e18e319bcc10de2070d3ac42307e62218ad63523b2a3c4c7f/adafruit_pureio-1.1.12-py3-none-any.whl", hash = "sha256:9904fb9519bca14e6c8dcb83913244258977c7e946dd0210de1041fc0bc97f3d", size = 10738, upload-time = "2026-09-24T19:44:07.922Z" },
+]
+
+[[package]]
+name = "adafruit-ssd1306"
+version = "1.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "adafruit-gpio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fc/de/0a176512f6fab96eb3e6adde2b267bab843b3b541d8b83a3783d79c6ff43/Adafruit_SSD1306-1.6.2.tar.gz", hash = "sha256:4768518204037db82eb6b90838938f8519ecd29fe3d6cc3efa0d1100ed527727", size = 5206, upload-time = "2018-05-30T20:03:34.628Z" }
+
 [[package]]
 name = "catkin-pkg"
 version = "1.1.1"
@@ -97,6 +143,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jetbot"
+version = "0.4.3"
+source = { git = "https://github.com/NVIDIA-AI-IOT/jetbot.git?tag=v0.4.3#5afa9ca18143e7f1a9579e60113a848e3f2d8ce6" }
+dependencies = [
+    { name = "adafruit-motorhat" },
+    { name = "adafruit-ssd1306" },
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.4.7"
 source = { registry = "https://pypi.org/simple" }
@@ -188,20 +243,24 @@ name = "patrol-jetbot-robot"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "jetbot", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pygame" },
     { name = "pyyaml" },
     { name = "rospkg" },
+    { name = "traitlets" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "jetbot", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", git = "https://github.com/NVIDIA-AI-IOT/jetbot.git?tag=v0.4.3" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pygame", specifier = ">=2.6.1,<3" },
     { name = "pyyaml" },
     { name = "rospkg" },
+    { name = "traitlets" },
 ]
 
 [[package]]
@@ -296,6 +355,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "traitlets"
+version = "5.14.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/79/72064e6a701c2183016abbbfedaba506d81e30e232a68c9f0d6f6fcd1574/traitlets-5.14.3.tar.gz", hash = "sha256:9ed0579d3502c94b4b3732ac120375cda96f923114522847de4b3bb98b96b6b7", size = 161621, upload-time = "2024-04-19T11:11:49.746Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl", hash = "sha256:b74e89e397b1ed28cc831db7aea759ba6640cb3de13090ca145426688ff1ac4f", size = 85359, upload-time = "2024-04-19T11:11:46.763Z" },
 ]
 
 [[package]]
