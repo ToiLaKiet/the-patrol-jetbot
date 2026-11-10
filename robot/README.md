@@ -45,3 +45,40 @@ provides CUDA 10.2, so CUDA 11 compatibility needs separate investigation.
 JetPack supplies CUDA and other system libraries; uv does not install or
 replace them. Keep the Conda configuration until the uv environment has been
 verified on the target device.
+
+## USB gamepad
+
+Pygame is a project dependency; install it in `robot/.venv` using uv, rather
+than installing it into the system Python with pip. Run these commands from
+`robot/` on the Jetson after creating the Python 3.8 environment above:
+
+```sh
+uv sync --inexact
+uv run --no-sync python -c "import sys, pygame; print(sys.executable); print(pygame.version.ver)"
+```
+
+`--inexact` preserves separately installed Jetson packages such as PyTorch.
+Run controller scripts with `uv run --no-sync python check_controller.py`
+if the script is saved in this directory.
+
+Linux utilities and native build dependencies are system packages, outside
+uv. To test the controller without Python:
+
+```sh
+sudo apt update
+sudo apt install joystick
+jstest /dev/input/js0
+```
+
+If Pygame falls back to a source build and reports missing SDL or FreeType,
+install its native build dependencies on the Jetson, then retry uv sync:
+
+```sh
+sudo apt install build-essential pkg-config python3.8-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libfreetype6-dev libportmidi-dev
+uv sync --inexact
+```
+
+The Python development headers must match the Python 3.8 interpreter used by
+the environment; if `python3.8-dev` is unavailable, obtain matching headers
+from the source used to install that interpreter. The system Python 3.6 on
+JetPack 4.5 does not satisfy this project's Python requirement.
