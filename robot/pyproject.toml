@@ -9,6 +9,7 @@ dependencies = [
     "rospkg",
     "pygame>=2.6.1,<3",
     "traitlets",
+    "opencv-python-headless==4.11.0.86",
     "jetbot; sys_platform == 'linux' and platform_machine == 'aarch64'",
 ]
 

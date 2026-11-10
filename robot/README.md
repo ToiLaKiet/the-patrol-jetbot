@@ -80,8 +80,23 @@ sudo apt install git cmake build-essential
 CUDA and TensorRT development libraries must be available in the environment
 where uv runs. JetBot also imports OpenCV, TensorRT and PyTorch through its
 package initialization; those must work with the project's Python 3.8.
-These JetPack-specific libraries are not installed automatically from PyPI.
-Check the first native Python imports with:
+OpenCV is installed through uv as `opencv-python-headless` 4.11.0.86, providing
+`cv2` without GUI dependencies for SSH teleop. This version has an ARM64 wheel
+compatible with the older glibc used by JetPack 4.5. Verify the import with:
+
+```sh
+uv run --no-sync python -c "import cv2; print(cv2.__version__)"
+```
+
+The PyPI OpenCV wheel is CPU-only and does not provide the Jetson camera's
+GStreamer backend. Before using the CSI camera, replace it with a Python
+3.8-compatible OpenCV build with GStreamer and update the uv dependency/source
+accordingly. Do not install multiple OpenCV distributions exposing `cv2` in
+the same environment.
+
+TensorRT and the Jetson-specific PyTorch build are not installed automatically
+from PyPI. Installing OpenCV alone does not validate the full JetBot import.
+Check the native Python imports with:
 
 ```sh
 uv run --no-sync python -c "import cv2, tensorrt, torch; print('Native imports OK')"
