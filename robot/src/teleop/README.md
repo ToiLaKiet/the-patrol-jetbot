@@ -115,7 +115,8 @@ Như vậy vừa vượt vùng chết chỉ tạo một lệnh nhỏ, không nh�
 
 ### Trộn tiến và rẽ
 
-Sau vùng chết, lấy `forward = -axis_y`, `turn = axis_x` rồi tính:
+Sau vùng chết, lấy `forward = -axis_y`. Trục rẽ được làm mềm bằng
+`turn = axis_x × |axis_x|`, rồi tính:
 
 ```text
 left  = forward + turn
@@ -127,6 +128,12 @@ right = max_speed × right / scale
 
 Vừa tiến vừa đẩy phải tạo đường cong; chỉ đẩy ngang tạo xoay tại chỗ.
 Chuẩn hóa cả hai bánh theo cùng tỷ lệ để giữ hướng rẽ khi bão hòa.
+
+Đường cong trục rẽ giảm độ nhạy quanh tâm: độ đẩy sau vùng chết 0.25, 0.5,
+0.75 tương ứng mức rẽ 0.0625, 0.25, 0.5625. Đẩy hết cần vẫn cho mức rẽ 1.
+Trục tiến/lùi vẫn tuyến tính; giới hạn thay đổi lệnh bánh bằng `slew_rate`
+và thao tác thả L1 để dừng ngay giữ nguyên. Đây là tỷ lệ lệnh motor, không phải
+góc rẽ hay vận tốc quay đo được; cần thử lại trên robot thực tế.
 
 `max_speed` là mức lệnh motor chuẩn hóa, không phải m/s. Ví dụ `0.25`
 giới hạn độ lớn lệnh mỗi bánh ở 0.25, trước hiệu chỉnh motor.

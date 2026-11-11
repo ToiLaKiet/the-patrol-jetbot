@@ -53,6 +53,8 @@ class Teleop:
             return 0.0, 0.0
 
         forward, turn = -self._axis(y), self._axis(x)
+        # Reduce steering sensitivity near center while retaining full-scale turns.
+        turn *= abs(turn)
         left, right = forward + turn, forward - turn
         scale = max(1.0, abs(left), abs(right))
         left, right = self.max_speed * left / scale, self.max_speed * right / scale

@@ -11,7 +11,7 @@ from hardware.patroljet import PatrolJet
 def main():
     robot = PatrolJet("Patrol-01")
     try:
-        robot.run_teleop(max_speed=0.25)
+        robot.run_teleop(max_speed=0.1)
     finally:
         robot.close()
 

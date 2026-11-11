@@ -50,6 +50,20 @@ class TeleopTests(unittest.TestCase):
         self.assertAlmostEqual(self.teleop._axis(-0.54), -0.5)
         self.assertLess(self.teleop._axis(0.080001), 0.00001)
 
+    def test_gentle_steering_near_center_and_forward_arc(self):
+        cases = [
+            (0.54, 0, (0.0625, -0.0625)),
+            (-0.54, 0, (-0.0625, 0.0625)),
+            (0.54, -1, (0.25, 0.15)),
+            (-0.54, -1, (0.15, 0.25)),
+        ]
+        for x, y, expected in cases:
+            with self.subTest(x=x, y=y):
+                self.arm()
+                left, right = self.teleop._command(x, y, True, 1.0)
+                self.assertAlmostEqual(left, expected[0])
+                self.assertAlmostEqual(right, expected[1])
+
     def test_slew_reversal_and_immediate_release(self):
         self.arm()
         self.assertEqual(self.teleop._command(0, -1, True, 0.1), (0.05, 0.05))
