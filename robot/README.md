@@ -97,6 +97,21 @@ https://github.com/numpy/numpy/issues/18131
 Matplotlib is not a runtime dependency: no current robot code imports it.
 This avoids building an unused plotting library during teleop setup.
 
+If individual PyTorch imports pass but `import jetbot` fails with
+`libgomp.so.1: cannot allocate memory in static TLS block`, preload the system
+OpenMP runtime before starting uv/Python:
+
+```sh
+export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libgomp.so.1${LD_PRELOAD:+:$LD_PRELOAD}"
+uv run --no-sync python check_jetbot_env.py
+```
+
+Keep this export in the shell used to launch teleop too. Setting `LD_PRELOAD`
+inside an already-running Python process is too late for startup preloading.
+The command preserves other existing preloads. This ARM64 workaround is
+documented by NVIDIA:
+https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_FAQ.html#how-to-fix-cannot-allocate-memory-in-static-tls-block-error
+
 ## Install NVIDIA PyTorch in uv
 
 First test whether a compatible PyTorch installation is already visible:
