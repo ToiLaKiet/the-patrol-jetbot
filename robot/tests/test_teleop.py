@@ -81,13 +81,16 @@ class TeleopTests(unittest.TestCase):
         pygame = Mock()
         for i, name in enumerate(("QUIT", "JOYDEVICEREMOVED", "JOYBUTTONUP")):
             setattr(pygame, name, i)
-        controller = pygame.joystick.Joystick.return_value
+        controller = Mock(spec_set=[
+            "init", "get_numaxes", "get_numbuttons", "get_instance_id",
+            "get_name", "get_axis", "get_button",
+        ])
+        pygame.joystick.Joystick.return_value = controller
         pygame.joystick.get_count.return_value = count
         controller.get_numaxes.return_value = axes
         controller.get_numbuttons.return_value = buttons
         controller.get_instance_id.return_value = 42
         controller.get_name.return_value = "TGZ Controller"
-        controller.get_attached.return_value = True
         self.fake_pygame = pygame
         self.now = 10.0
         frames = iter(frames)
@@ -100,15 +103,26 @@ class TeleopTests(unittest.TestCase):
             self.now += frame.get("dt", 0.02)
             controller.get_axis.side_effect = lambda axis: frame.get("x" if axis == 0 else "y", 0)
             controller.get_button.return_value = frame.get("enabled", False)
-            controller.get_attached.return_value = frame.get("attached", True)
+            pygame.joystick.get_count.return_value = frame.get("count", count)
+            if frame.get("read_error"):
+                controller.get_axis.side_effect = RuntimeError("Controller read failed")
             self.teleop.safety_input.estop = frame.get("estop", False)
             return frame.get("events", [])
 
         pygame.event.get.side_effect = get_events
         with patch.dict("sys.modules", {"pygame": pygame}), \
                 patch("teleop.teleop.time.monotonic", side_effect=lambda: self.now), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()) as output:
             self.teleop.run()
+        self.output = output.getvalue()
+
+    def test_sdl_quit_stops_motor_and_reports_exit(self):
+        quit_event = SimpleNamespace(type=0)
+        self.run_frames([{}, {"y": -1, "enabled": True}, {"events": [quit_event]}])
+        self.assertEqual(self.motors.set_motors.call_count, 1)
+        self.assertEqual(self.motors.mock_calls[-1][0], "stop")
+        self.fake_pygame.quit.assert_called_once()
+        self.assertIn("SDL yêu cầu thoát", self.output)
 
     def test_run_holds_command_without_axis_events_and_stops_on_release(self):
         self.run_frames([{}, {"y": -1, "enabled": True},
@@ -138,7 +152,8 @@ class TeleopTests(unittest.TestCase):
 
     def test_connection_and_input_failures_stop_and_cleanup(self):
         for frames, kwargs in (([], {"count": 0}), ([], {"buttons": 6}),
-                               ([{"attached": False}], {}),
+                               ([{"count": 0}], {}),
+                               ([{"read_error": True}], {}),
                                ([{"x": math.nan}], {}),
                                ([{"events": [SimpleNamespace(type=1, instance_id=42)]}], {})):
             with self.subTest(frames=frames, kwargs=kwargs):
@@ -146,6 +161,17 @@ class TeleopTests(unittest.TestCase):
                 with self.assertRaises((ValueError, RuntimeError)):
                     self.run_frames(frames, **kwargs)
                 self.motors.set_motors.assert_not_called()
+                self.assertEqual(self.motors.mock_calls[-1][0], "stop")
+                self.fake_pygame.quit.assert_called_once()
+
+    def test_disconnect_after_motion_stops_for_event_or_empty_device_list(self):
+        removed = SimpleNamespace(type=1, instance_id=42)
+        for fault in ({"count": 0}, {"events": [removed]}, {"read_error": True}):
+            with self.subTest(fault=fault):
+                self.motors.reset_mock()
+                with self.assertRaises(RuntimeError):
+                    self.run_frames([{}, {"y": -1, "enabled": True}, fault])
+                self.assertEqual(self.motors.set_motors.call_count, 1)
                 self.assertEqual(self.motors.mock_calls[-1][0], "stop")
                 self.fake_pygame.quit.assert_called_once()
 

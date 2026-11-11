@@ -92,6 +92,7 @@ class Teleop:
                 released = False
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
+                        print(f"SDL yêu cầu thoát; dừng teleop. Sự kiện: {event}")
                         return
                     if getattr(event, "instance_id", None) != instance_id:
                         continue
@@ -99,7 +100,7 @@ class Teleop:
                         raise RuntimeError("Tay cầm đã ngắt kết nối")
                     if event.type == pygame.JOYBUTTONUP and event.button == 6:
                         released = True
-                if not controller.get_attached():
+                if pygame.joystick.get_count() == 0:
                     raise RuntimeError("Tay cầm đã ngắt kết nối")
                 x, y = controller.get_axis(0), controller.get_axis(1)
                 enabled = bool(controller.get_button(6)) and not released
