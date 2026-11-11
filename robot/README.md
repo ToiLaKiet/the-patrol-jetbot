@@ -162,7 +162,8 @@ After the checker passes, raise the wheels and run:
 uv run --no-sync python src/main.py
 ```
 
-TGZ mapping: left stick axes 0/1 and L1 button 6. Bring the stick to center,
+Current mapping, verified while the pad reports `Microsoft X-Box 360 pad`:
+left stick axes 0/1 and L1 button 4. Bring the stick to center,
 release L1, then hold L1 to drive. Releasing L1 stops immediately. The teleop
 code sets `SDL_LINUX_JOYSTICK_CLASSIC=1` and supports SSH. See
 `src/teleop/README.md` for control behavior and motor-test precautions.

@@ -102,7 +102,8 @@ class TeleopTests(unittest.TestCase):
                 raise KeyboardInterrupt
             self.now += frame.get("dt", 0.02)
             controller.get_axis.side_effect = lambda axis: frame.get("x" if axis == 0 else "y", 0)
-            controller.get_button.return_value = frame.get("enabled", False)
+            pressed = frame.get("pressed", [4] if frame.get("enabled", False) else [])
+            controller.get_button.side_effect = lambda index: int(index in pressed)
             pygame.joystick.get_count.return_value = frame.get("count", count)
             if frame.get("read_error"):
                 controller.get_axis.side_effect = RuntimeError("Controller read failed")
@@ -135,11 +136,22 @@ class TeleopTests(unittest.TestCase):
         self.fake_pygame.quit.assert_called_once()
 
     def test_release_event_is_not_lost_when_repressed_within_same_poll(self):
-        release = SimpleNamespace(type=2, instance_id=42, button=6)
+        release = SimpleNamespace(type=2, instance_id=42, button=4)
         self.run_frames([{}, {"y": -1, "enabled": True},
                          {"y": -1, "enabled": True, "events": [release]},
                          {"y": -1, "enabled": True}])
         self.assertEqual(self.motors.set_motors.call_count, 1)
+
+    def test_reported_l1_button_4_drives_and_button_6_does_not(self):
+        self.run_frames([
+            {}, {"y": -1, "pressed": [6]}, {},
+            {"y": -1, "pressed": [4]}, {"y": -1, "pressed": []},
+        ], buttons=7)
+        self.assertEqual(self.motors.set_motors.call_count, 1)
+        self.assertGreater(self.motors.set_motors.call_args[0][0], 0)
+        self.assertEqual(self.motors.mock_calls[-1][0], "stop")
+        controller = self.fake_pygame.joystick.Joystick.return_value
+        self.assertTrue(all(call[0] == (4,) for call in controller.get_button.call_args_list))
 
     def test_safety_stop_and_delayed_loop_require_rearming(self):
         for fault in ({"estop": True}, {"dt": 1.1}):
@@ -151,7 +163,7 @@ class TeleopTests(unittest.TestCase):
                 self.assertEqual(self.motors.set_motors.call_count, 1)
 
     def test_connection_and_input_failures_stop_and_cleanup(self):
-        for frames, kwargs in (([], {"count": 0}), ([], {"buttons": 6}),
+        for frames, kwargs in (([], {"count": 0}), ([], {"buttons": 4}),
                                ([{"count": 0}], {}),
                                ([{"read_error": True}], {}),
                                ([{"x": math.nan}], {}),

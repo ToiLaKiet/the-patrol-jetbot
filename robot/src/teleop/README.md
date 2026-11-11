@@ -62,9 +62,10 @@ Thay `max_speed` trong `src/main.py` để đổi giới hạn công suất. Khi
 
 ## Kết nối và mapping đã xác nhận
 
-Trước khi đổi môi trường, Jetson đã nhận TGZ bằng Python 3.8.20, Pygame 2.6.1,
-SDL 2.28.4, 6 axes và 15 buttons. Dự án hiện dùng Python 3.6.9 theo JetPack 4.5;
-cần xác nhận lại tay cầm sau khi tạo lại `.venv` theo `robot/README.md`.
+Mapping hiện tại đã được xác nhận lại trên Python 3.6.9, Pygame 2.6.1,
+SDL 2.28.4, khi tay cầm báo tên `Microsoft X-Box 360 pad`: L1 là button 4.
+Mapping button 6 đo trước đó khi tay cầm báo tên TGZ không áp dụng cho chế độ
+hiện tại. Nếu đổi chế độ tay cầm, cần kiểm tra lại mapping trước khi chạy motor.
 Đặt các biến sau trước khi khởi tạo SDL:
 
 ```python
@@ -79,7 +80,7 @@ os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
 | --- | --- |
 | Axis 1 âm | Đẩy cần trái lên, tiến |
 | Axis 0 dương | Đẩy cần trái sang phải, rẽ phải |
-| Button 6 | L1: giữ để chạy, thả để dừng |
+| Button 4 | L1: giữ để chạy, thả để dừng |
 | Axis 0 và 1 về 0 | Cần trái ở giữa |
 
 Khi mở thiết bị, kiểm tra đủ axes/buttons và theo dõi đúng instance ID.

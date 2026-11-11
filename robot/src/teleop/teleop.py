@@ -8,6 +8,8 @@ from safety.safety import SafetyInput
 
 
 class Teleop:
+    L1_BUTTON = 4
+
     def __init__(self, motors, safety, max_speed=0.25, deadzone=0.08, slew_rate=0.5):
         if not all(math.isfinite(x) for x in (max_speed, deadzone, slew_rate)):
             raise ValueError("Teleop parameters must be finite")
@@ -79,11 +81,11 @@ class Teleop:
                 raise RuntimeError("Không tìm thấy tay cầm USB")
             controller = pygame.joystick.Joystick(0)
             controller.init()
-            if controller.get_numaxes() < 2 or controller.get_numbuttons() < 7:
-                raise RuntimeError("Tay cầm không đủ axis 0/1 và button 6")
+            if controller.get_numaxes() < 2 or controller.get_numbuttons() <= self.L1_BUTTON:
+                raise RuntimeError(f"Tay cầm không đủ axis 0/1 và button {self.L1_BUTTON}")
             instance_id = controller.get_instance_id()
             print(f"Teleop: {controller.get_name()}, max_speed={self.max_speed:g}")
-            print("Đưa cần về giữa, thả L1 rồi giữ L1 để chạy. Ctrl+C để thoát.")
+            print(f"Đưa cần về giữa, thả L1/button {self.L1_BUTTON} rồi giữ L1 để chạy. Ctrl+C để thoát.")
             print("Chưa giám sát pin. Thả L1 để dừng ngay.")
             clock = pygame.time.Clock()
             last_cmd_t = time.monotonic()
@@ -98,12 +100,12 @@ class Teleop:
                         continue
                     if event.type == pygame.JOYDEVICEREMOVED:
                         raise RuntimeError("Tay cầm đã ngắt kết nối")
-                    if event.type == pygame.JOYBUTTONUP and event.button == 6:
+                    if event.type == pygame.JOYBUTTONUP and event.button == self.L1_BUTTON:
                         released = True
                 if pygame.joystick.get_count() == 0:
                     raise RuntimeError("Tay cầm đã ngắt kết nối")
                 x, y = controller.get_axis(0), controller.get_axis(1)
-                enabled = bool(controller.get_button(6)) and not released
+                enabled = bool(controller.get_button(self.L1_BUTTON)) and not released
                 now = time.monotonic()
                 left, right = self._command(x, y, enabled, now - last_cmd_t)
                 self.safety_input.last_cmd_t = last_cmd_t
