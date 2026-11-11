@@ -245,8 +245,10 @@ class SafetyAndMotorTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             robot = patroljet.PatrolJet("test")
             teleop.assert_not_called()
-            robot.run_teleop(max_speed=0.2)
-            teleop.assert_called_once_with(motors.return_value, robot.safety, max_speed=0.2)
+            robot.run_teleop(max_speed=0.2, deadzone=0.12, slew_rate=0.3)
+            teleop.assert_called_once_with(
+                motors.return_value, robot.safety, max_speed=0.2, deadzone=0.12, slew_rate=0.3,
+            )
             teleop.return_value.run.assert_called_once()
             camera.return_value.start.assert_not_called()
             robot.close()

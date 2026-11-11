@@ -37,7 +37,8 @@ class EnvironmentCheckTests(unittest.TestCase):
                 patch("platform.machine", return_value="aarch64"), \
                 patch.dict("sys.modules", {"hardware.patroljet": Hardware()}):
             os.environ.pop("OPENBLAS_CORETYPE", None)
-            runpy.run_path(str(entrypoint), run_name="test_entrypoint")
+            module = runpy.run_path(str(entrypoint), run_name="test_entrypoint")
+            module["main"]([])
             self.assertEqual(os.environ["OPENBLAS_CORETYPE"], "ARMV8")
 
     def test_reports_all_failures_without_importing_jetbot(self):

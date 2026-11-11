@@ -26,8 +26,10 @@ class PatrolJet:
         else:
             self.motors.stop()
 
-    def run_teleop(self, max_speed=0.25):
-        self.teleop = Teleop(self.motors, self.safety, max_speed=max_speed)
+    def run_teleop(self, max_speed=0.25, deadzone=0.08, slew_rate=0.5):
+        self.teleop = Teleop(
+            self.motors, self.safety, max_speed=max_speed, deadzone=deadzone, slew_rate=slew_rate,
+        )
         self.teleop.run()
 
     def close(self):

@@ -86,7 +86,8 @@ class Teleop:
             if controller.get_numaxes() < 2 or controller.get_numbuttons() <= self.L1_BUTTON:
                 raise RuntimeError(f"Tay cầm không đủ axis 0/1 và button {self.L1_BUTTON}")
             instance_id = controller.get_instance_id()
-            print(f"Teleop: {controller.get_name()}, max_speed={self.max_speed:g}")
+            print(f"Teleop: {controller.get_name()}, max_speed={self.max_speed:g}, "
+                  f"deadzone={self.deadzone:g}, slew_rate={self.slew_rate:g}")
             print(f"Đưa cần về giữa, thả L1/button {self.L1_BUTTON} rồi giữ L1 để chạy. Ctrl+C để thoát.")
             print("Chưa giám sát pin. Thả L1 để dừng ngay.")
             clock = pygame.time.Clock()

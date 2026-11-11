@@ -30,7 +30,7 @@ class Teleop:
         ...
 ```
 
-`PatrolJet.run_teleop(max_speed=...)` tạo `Teleop` với `self.motors` và
+`PatrolJet.run_teleop(max_speed=..., deadzone=..., slew_rate=...)` tạo `Teleop` với `self.motors` và
 `self.safety`, rồi gọi `run()`. `PatrolJet` khởi tạo `SafetyLayer` khi tạo robot.
 Tạo `PatrolJet(...)` chưa bắt đầu vòng lặp điều khiển.
 Vòng lặp teleop chạy trên luồng chính, chưa cần thêm thread.
@@ -56,9 +56,22 @@ Từ thư mục `robot/` trên Jetson, sau khi đồng bộ dependency bằng uv
 uv run --no-sync python src/main.py
 ```
 
-Thay `max_speed` trong `src/main.py` để đổi giới hạn công suất. Khi cần chỉnh
-`deadzone` hoặc `slew_rate`, truyền chúng lúc tạo `Teleop` trong
-`PatrolJet.run_teleop()`. Chưa có tùy chọn dòng lệnh cho các giá trị này.
+Truyền tham số khi chạy, không cần sửa code:
+
+```sh
+uv run --no-sync python src/main.py --max-speed 0.1 --deadzone 0.08 --slew-rate 0.3
+uv run --no-sync python src/main.py --help
+```
+
+| Tham số | Mặc định CLI | Phạm vi |
+| --- | --- | --- |
+| `--max-speed` | 0.1 | (0, 1], công suất chuẩn hóa; còn bị giới hạn bởi `JetMotors.max_duty` |
+| `--deadzone` | 0.08 | [0, 1) |
+| `--slew-rate` | 0.5 | Hữu hạn và > 0, đơn vị lệnh motor/giây |
+
+Giảm `--slew-rate` để lệnh bánh thay đổi chậm hơn; thông số này áp dụng cả
+tiến/lùi và rẽ. Mọi tham số phải hữu hạn. Giá trị lỗi và `--help` được xử lý
+trước khi import thư viện phần cứng hoặc khởi tạo motor.
 
 ## Kết nối và mapping đã xác nhận
 

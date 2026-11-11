@@ -162,6 +162,16 @@ After the checker passes, raise the wheels and run:
 uv run --no-sync python src/main.py
 ```
 
+To tune teleop without editing code:
+
+```sh
+uv run --no-sync python src/main.py --max-speed 0.1 --deadzone 0.08 --slew-rate 0.3
+uv run --no-sync python src/main.py --help
+```
+
+CLI defaults are `--max-speed 0.1`, `--deadzone 0.08`, `--slew-rate 0.5`.
+Max speed is a normalized motor command, capped by the motor layer, not m/s.
+
 Current mapping, verified while the pad reports `Microsoft X-Box 360 pad`:
 left stick axes 0/1 and L1 button 4. Bring the stick to center,
 release L1, then hold L1 to drive. Releasing L1 stops immediately. The teleop
