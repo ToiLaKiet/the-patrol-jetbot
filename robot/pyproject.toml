@@ -4,7 +4,6 @@ version = "0.1.0"
 requires-python = ">=3.6.9,<3.7"
 dependencies = [
     "numpy==1.19.5",
-    "matplotlib==3.3.4",
     "pyyaml==6.0.1",
     "rospkg==1.5.1",
     "pygame==2.6.1",

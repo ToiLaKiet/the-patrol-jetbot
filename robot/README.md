@@ -19,7 +19,6 @@ those import dependencies, including TensorRT and PyTorch, must be present.
 | CUDA / TensorRT | JetPack 4.5 system libraries; Python 3.6 TensorRT bindings from apt |
 | PyTorch | NVIDIA `torch-1.10.0-cp36-cp36m-linux_aarch64.whl` for JetPack 4.x |
 | NumPy | 1.19.5 |
-| Matplotlib | 3.3.4 |
 | PyYAML / rospkg | 6.0.1 / 1.5.1 |
 | Pygame | 2.6.1 |
 | traitlets / ipywidgets | 4.3.3 / 7.7.2 |
@@ -60,8 +59,7 @@ sudo apt install git curl ca-certificates cmake build-essential pkg-config pytho
 Use the NVIDIA apt repositories matching the installed JetPack, not a newer
 TensorRT/CUDA repository. CUDA/TensorRT development libraries and NVIDIA's
 `nvjpegenc` GStreamer plugin must be available in this host/container too.
-The JetBot installer builds its TensorRT plugin with CMake/Make. Matplotlib
-may need a source build on Python 3.6 ARM64; this can take time. Pygame 2.6.1
+The JetBot installer builds its TensorRT plugin with CMake/Make. Pygame 2.6.1
 has a CPython 3.6 ARM64 wheel containing SDL 2.28.4, including the classic
 joystick interface used by the TGZ Controller. Prefer that wheel; a fallback
 source build links the system SDL, whose version/features must be checked.
@@ -74,13 +72,30 @@ it can be restored if needed. Run the move only if that old `.venv` exists:
 ```sh
 mv .venv "$HOME/patrol-jetbot-venv-py38-$(date +%Y%m%d-%H%M%S)"
 uv venv --python /usr/bin/python3 --system-site-packages
-uv sync --locked --inexact
+OPENBLAS_CORETYPE=ARMV8 uv sync --locked --inexact
 ```
 
 `--system-site-packages` exposes the matching Python 3.6 TensorRT bindings from
 JetPack. `--inexact` preserves packages installed separately, such as NVIDIA's
 PyTorch wheel. Neither option exposes packages located inside another Docker
 container. uv still manages the project's ordinary Python dependencies.
+
+NumPy 1.19.5's bundled OpenBLAS can select an incompatible CPU kernel on
+Jetson Nano and terminate with SIGILL (illegal instruction). Export this
+setting before installation and ad hoc Python commands in the current shell:
+
+```sh
+export OPENBLAS_CORETYPE=ARMV8
+```
+
+`src/main.py` and `check_jetbot_env.py` set this default on ARM64 before loading
+native dependencies, preserving an explicit user setting. For `uv sync` and
+other commands use the export above or prefix the command with
+`OPENBLAS_CORETYPE=ARMV8`. See NumPy's issue:
+https://github.com/numpy/numpy/issues/18131
+
+Matplotlib is not a runtime dependency: no current robot code imports it.
+This avoids building an unused plotting library during teleop setup.
 
 ## Install NVIDIA PyTorch in uv
 

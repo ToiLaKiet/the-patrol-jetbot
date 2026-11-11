@@ -1,5 +1,7 @@
 """Report JetBot runtime dependencies without constructing Robot or commanding motors."""
 
+import os
+import platform
 import subprocess
 import sys
 
@@ -45,6 +47,9 @@ def check(name, code):
 
 
 def main():
+    # Child imports inherit the OpenBLAS workaround before loading NumPy.
+    if platform.machine() == "aarch64":
+        os.environ.setdefault("OPENBLAS_CORETYPE", "ARMV8")
     print("Python:", sys.executable, flush=True)
     failed = []
     for name, code in CHECKS:

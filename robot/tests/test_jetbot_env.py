@@ -1,5 +1,8 @@
 import contextlib
 import io
+import os
+from pathlib import Path
+import runpy
 import subprocess
 import unittest
 from unittest.mock import Mock, patch
@@ -8,6 +11,35 @@ import check_jetbot_env
 
 
 class EnvironmentCheckTests(unittest.TestCase):
+    def test_arm64_checker_sets_openblas_default_and_preserves_override(self):
+        result = Mock(returncode=0, stdout="", stderr="")
+        for initial in (None, "CORTEXA57"):
+            with self.subTest(initial=initial), patch.dict(os.environ), \
+                    patch.object(check_jetbot_env.platform, "machine", return_value="aarch64"), \
+                    patch.object(check_jetbot_env.subprocess, "run", return_value=result), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                os.environ.pop("OPENBLAS_CORETYPE", None)
+                if initial is not None:
+                    os.environ["OPENBLAS_CORETYPE"] = initial
+                self.assertEqual(check_jetbot_env.main(), 0)
+                self.assertEqual(os.environ["OPENBLAS_CORETYPE"], initial or "ARMV8")
+
+    def test_arm64_entrypoint_sets_openblas_before_importing_hardware(self):
+        entrypoint = Path(__file__).resolve().parents[1] / "src/main.py"
+
+        class Hardware:
+            @property
+            def PatrolJet(module_self):
+                self.assertEqual(os.environ.get("OPENBLAS_CORETYPE"), "ARMV8")
+                return Mock()
+
+        with patch.dict(os.environ), \
+                patch("platform.machine", return_value="aarch64"), \
+                patch.dict("sys.modules", {"hardware.patroljet": Hardware()}):
+            os.environ.pop("OPENBLAS_CORETYPE", None)
+            runpy.run_path(str(entrypoint), run_name="test_entrypoint")
+            self.assertEqual(os.environ["OPENBLAS_CORETYPE"], "ARMV8")
+
     def test_reports_all_failures_without_importing_jetbot(self):
         result = Mock(returncode=1, stderr="ModuleNotFoundError: missing", stdout="")
         output = io.StringIO()
