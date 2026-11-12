@@ -19,7 +19,7 @@ sequenceDiagram
     end
     Robot->>Pad: run() trên thread chính
     Pad->>Pad: Đọc tay cầm, kiểm tra safety, gửi lệnh
-    Pad-->>Robot: Kết thúc hoặc báo lỗi; dừng motor
+    Pad-->>Robot: Kết thúc hoặc báo lỗi và dừng motor
     Main->>Robot: close() trong finally
     Robot->>Robot: Dừng motor
     Robot->>Rec: close() nếu có recorder
