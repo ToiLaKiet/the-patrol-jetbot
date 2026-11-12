@@ -184,6 +184,38 @@ Automated tests, without accessing motors:
 PYTHONPATH=src uv run --no-sync python -m unittest discover -s tests -v
 ```
 
+## Record a teach run
+
+From `robot/`, run teleop with recording enabled:
+
+```sh
+uv run --no-sync python src/main.py --teach-dir teach
+```
+
+Each run creates a unique `teach/run_YYYYMMDD_HHMMSS_.../` directory with
+numbered JPEG files in `images/` and `samples.csv`. Recording runs in a
+background thread at about 5 Hz; slow storage reduces the recording rate
+without waiting for disk writes in the joystick loop. The camera starts only
+when recording is requested. Release L1 to stop driving, or Ctrl+C to finish.
+Camera or recording errors end teleop and stop the motors. Normal cleanup
+stops the motors before joining the recorder and closing the camera.
+
+CSV columns are `image,frame_read_s,command_s,left,right`. Times use a
+monotonic clock relative to the start of recording. `command_s` is the time
+of the latest successful motor command before reading the frame; it can be
+slightly negative for the initial stop before recording started. `left` and
+`right` are normalized commands after the duty limit, before the JetBot
+driver's motor calibration, not measured wheel speeds. Stops are `(0, 0)`.
+Commands between samples are not recorded. An image is written before its
+CSV row, and CSV is flushed after each sample; sudden power loss can still
+lose buffered data or leave an image without a CSV row.
+
+The frame timestamp marks the read, not sensor exposure. The current camera
+API returns the latest frame and does not expose capture timestamps or detect
+a frozen stream. This mode requires a working JetBot camera backend; the
+headless OpenCV wheel alone cannot open the CSI GStreamer pipeline (see below).
+Teach recording does not require ROS or the PlaceNav dependencies.
+
 ## Limits and later navigation work
 
 The OpenCV wheel provides `cv2` for imports and CPU image processing; it does

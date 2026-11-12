@@ -13,6 +13,7 @@ class PatrolJet:
         self.motors = JetMotors()
         self.safety = SafetyLayer()
         self.teleop = None
+        self.recorder = None
 
         print(f"PatrolJet {self.name} initialized.")
 
@@ -26,9 +27,16 @@ class PatrolJet:
         else:
             self.motors.stop()
 
-    def run_teleop(self, max_speed=0.25, deadzone=0.08, slew_rate=0.5):
+    def run_teleop(self, max_speed=0.25, deadzone=0.08, slew_rate=0.5, teach_dir=None):
+        if teach_dir is not None:
+            from teach.recorder import TeachRecorder
+
+            self.start()
+            self.recorder = TeachRecorder(self.camera, self.motors, teach_dir)
+            self.recorder.start()
         self.teleop = Teleop(
             self.motors, self.safety, max_speed=max_speed, deadzone=deadzone, slew_rate=slew_rate,
+            recorder=self.recorder,
         )
         self.teleop.run()
 
@@ -36,4 +44,8 @@ class PatrolJet:
         try:
             self.stop()
         finally:
-            self.camera.stop()
+            try:
+                if self.recorder is not None:
+                    self.recorder.close()
+            finally:
+                self.camera.stop()

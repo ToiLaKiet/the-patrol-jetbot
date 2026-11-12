@@ -10,7 +10,8 @@ from safety.safety import SafetyInput
 class Teleop:
     L1_BUTTON = 4
 
-    def __init__(self, motors, safety, max_speed=0.25, deadzone=0.08, slew_rate=0.5):
+    def __init__(self, motors, safety, max_speed=0.25, deadzone=0.08, slew_rate=0.5,
+                 recorder=None):
         if not all(math.isfinite(x) for x in (max_speed, deadzone, slew_rate)):
             raise ValueError("Teleop parameters must be finite")
         if not (0 < max_speed <= 1 and 0 <= deadzone < 1 and slew_rate > 0):
@@ -18,6 +19,7 @@ class Teleop:
         if not math.isfinite(safety.cfg.cmd_timeout) or safety.cfg.cmd_timeout <= 0:
             raise ValueError("Command timeout must be finite and positive")
         self.motors = motors
+        self.recorder = recorder
         self.safety = safety
         self.max_speed = min(max_speed, motors.max_duty)
         self.deadzone = deadzone
@@ -115,6 +117,8 @@ class Teleop:
                 self.safety_input.now = time.monotonic()
                 previous_reason = self.safety.reason
                 reason = self.safety.check(self.safety_input)
+                if self.recorder is not None:
+                    self.recorder.check()
                 if reason != "OK":
                     self._reset()
                     self.motors.stop()

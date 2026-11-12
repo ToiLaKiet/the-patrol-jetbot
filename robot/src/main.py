@@ -15,6 +15,7 @@ def main(argv=None):
                         help="Vùng chết joystick [0, 1) (mặc định: 0.08).")
     parser.add_argument("--slew-rate", type=float, default=0.5,
                         help="Mức thay đổi lệnh motor mỗi giây, > 0 (mặc định: 0.5).")
+    parser.add_argument("--teach-dir", help="Thư mục lưu phiên teach: ảnh và CSV ở khoảng 5 Hz.")
     args = parser.parse_args(argv)
     if not (math.isfinite(args.max_speed) and 0 < args.max_speed <= 1):
         parser.error("--max-speed phải hữu hạn và trong khoảng (0, 1].")
@@ -27,7 +28,8 @@ def main(argv=None):
 
     robot = PatrolJet("Patrol-01")
     try:
-        robot.run_teleop(max_speed=args.max_speed, deadzone=args.deadzone, slew_rate=args.slew_rate)
+        robot.run_teleop(max_speed=args.max_speed, deadzone=args.deadzone,
+                         slew_rate=args.slew_rate, teach_dir=args.teach_dir)
     finally:
         robot.close()
 

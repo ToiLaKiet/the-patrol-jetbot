@@ -201,6 +201,15 @@ class TeleopTests(unittest.TestCase):
                 self.assertEqual(self.motors.mock_calls[-1][0], "stop")
                 self.fake_pygame.quit.assert_called_once()
 
+    def test_recorder_failure_stops_before_next_motor_command(self):
+        self.teleop.recorder = Mock()
+        self.teleop.recorder.check.side_effect = [None, None, RuntimeError("Disk full")]
+        with self.assertRaisesRegex(RuntimeError, "Disk full"):
+            self.run_frames([{}, {"y": -1, "enabled": True}, {"y": -1, "enabled": True}])
+        self.assertEqual(self.motors.set_motors.call_count, 1)
+        self.assertEqual(self.motors.mock_calls[-1][0], "stop")
+        self.fake_pygame.quit.assert_called_once()
+
 
 class SafetyAndMotorTests(unittest.TestCase):
     def test_safety_priority_and_velocity_limits(self):
@@ -228,11 +237,13 @@ class SafetyAndMotorTests(unittest.TestCase):
         motors.robot = Mock()
         motors.set_motors(0.8, -0.4)
         motors.robot.set_motors.assert_called_once_with(0.4, -0.2)
+        self.assertEqual(motors.last_command[1:], (0.4, -0.2))
         motors.robot.reset_mock()
         with self.assertRaises(ValueError):
             motors.set_motors(math.nan, 0)
         motors.robot.set_motors.assert_not_called()
         motors.robot.stop.assert_called_once()
+        self.assertEqual(motors.last_command[1:], (0, 0))
         motors.robot.set_motors.side_effect = OSError("I2C failure")
         with self.assertRaises(OSError):
             motors.set_motors(0.1, 0.1)
@@ -248,12 +259,35 @@ class SafetyAndMotorTests(unittest.TestCase):
             robot.run_teleop(max_speed=0.2, deadzone=0.12, slew_rate=0.3)
             teleop.assert_called_once_with(
                 motors.return_value, robot.safety, max_speed=0.2, deadzone=0.12, slew_rate=0.3,
+                recorder=None,
             )
             teleop.return_value.run.assert_called_once()
             camera.return_value.start.assert_not_called()
             robot.close()
             teleop.return_value.stop.assert_called_once()
             camera.return_value.stop.assert_called_once()
+
+    def test_teach_starts_camera_and_stops_motor_before_closing_recorder(self):
+        with patch.object(patroljet, "JetMotors"), \
+                patch.object(patroljet, "JetCamera"), \
+                patch.object(patroljet, "Teleop") as teleop, \
+                patch("teach.recorder.TeachRecorder") as recorder, \
+                contextlib.redirect_stdout(io.StringIO()):
+            robot = patroljet.PatrolJet("test")
+            robot.run_teleop(teach_dir="teach")
+            robot.camera.start.assert_called_once()
+            recorder.assert_called_once_with(robot.camera, robot.motors, "teach")
+            recorder.return_value.start.assert_called_once()
+            self.assertIs(teleop.call_args[1]["recorder"], recorder.return_value)
+            order = Mock()
+            order.attach_mock(teleop.return_value.stop, "stop_motor")
+            order.attach_mock(recorder.return_value.close, "close_recorder")
+            order.attach_mock(robot.camera.stop, "close_camera")
+            recorder.return_value.close.side_effect = RuntimeError("Disk full")
+            with self.assertRaisesRegex(RuntimeError, "Disk full"):
+                robot.close()
+            self.assertEqual([call[0] for call in order.mock_calls],
+                             ["stop_motor", "close_recorder", "close_camera"])
 
 
 if __name__ == "__main__":

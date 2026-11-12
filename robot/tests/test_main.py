@@ -18,14 +18,20 @@ class MainTests(unittest.TestCase):
         main.main([])
         self.factory.assert_called_once_with("Patrol-01")
         self.factory.return_value.run_teleop.assert_called_once_with(
-            max_speed=0.1, deadzone=0.08, slew_rate=0.5,
+            max_speed=0.1, deadzone=0.08, slew_rate=0.5, teach_dir=None,
         )
         self.factory.return_value.close.assert_called_once()
 
     def test_custom_parameters(self):
         main.main(["--max-speed", "0.2", "--deadzone", "0.12", "--slew-rate", "0.25"])
         self.factory.return_value.run_teleop.assert_called_once_with(
-            max_speed=0.2, deadzone=0.12, slew_rate=0.25,
+            max_speed=0.2, deadzone=0.12, slew_rate=0.25, teach_dir=None,
+        )
+
+    def test_teach_directory_is_passed_to_robot(self):
+        main.main(["--teach-dir", "teach"])
+        self.factory.return_value.run_teleop.assert_called_once_with(
+            max_speed=0.1, deadzone=0.08, slew_rate=0.5, teach_dir="teach",
         )
 
     def test_invalid_parameters_never_initialize_hardware(self):
