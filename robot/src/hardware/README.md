@@ -33,7 +33,9 @@ Teleop hiện tại gọi `set_motors()` trực tiếp.
 
 ## Camera và vòng đời
 
-`JetCamera.start()` dùng `Camera.instance()` ở 224 × 224 mặc định.
+`JetCamera.start()` kiểm tra OpenCV có GStreamer rồi gọi `Camera.instance()`
+ở 224 × 224 mặc định. Nếu thiếu backend, báo lỗi kèm đường dẫn OpenCV
+để phân biệt bản `.venv` với bản hệ thống; không thay backend tự động.
 `get_frame()` kiểm tra camera đã mở, frame không rỗng, rồi trả `frame.copy()`.
 Không có timestamp từ cảm biến hoặc kiểm tra frame bị đóng băng.
 Camera CSI cần backend GStreamer; xem [cài đặt](../../README.md#khởi-tạo-trên-jetbot).

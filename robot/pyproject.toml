@@ -12,7 +12,6 @@ dependencies = [
     "pyzmq==22.3.0",
     "pillow==8.4.0",
     "setuptools==59.6.0",
-    "opencv-python-headless==4.5.5.64",
     "dataclasses==0.8",
     "importlib-metadata==4.8.3",
     # Compatible with GLib 2.56 / GI 1.56 from Ubuntu 18.04 (JetPack 4.5).
@@ -32,5 +31,5 @@ name = "jetbot"
 version = "0.4.3"
 requires-dist = ["Adafruit-MotorHAT", "Adafruit-SSD1306"]
 
-# TensorRT bindings come from JetPack via --system-site-packages.
+# OpenCV (with GStreamer) and TensorRT come from JetPack via --system-site-packages.
 # Install NVIDIA's torch 1.10.0 CPython 3.6 / ARM64 wheel separately with uv pip.

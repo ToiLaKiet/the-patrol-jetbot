@@ -1,4 +1,6 @@
+import re
 
+import cv2
 from jetbot import Camera
 
 
@@ -10,6 +12,12 @@ class JetCamera:
 
     def start(self):
         if self.camera is None:
+            if not re.search(r"^\s*GStreamer:\s+YES\b", cv2.getBuildInformation(), re.MULTILINE):
+                raise RuntimeError(
+                    "OpenCV has no GStreamer support: {}. Remove pip OpenCV from .venv "
+                    "and use JetPack system OpenCV via --system-site-packages; "
+                    "see robot/README.md.".format(cv2.__file__)
+                )
             self.camera = Camera.instance(
                 width=self.width,
                 height=self.height

@@ -70,8 +70,39 @@ uv venv --python /usr/bin/python3 --system-site-packages
 uv sync --locked --inexact
 ```
 
-`--system-site-packages` cho phép dùng TensorRT của JetPack;
+`--system-site-packages` cho phép dùng OpenCV và TensorRT của JetPack;
 `--inexact` giữ lại PyTorch được cài riêng. Không đổi Python hệ thống.
+
+### OpenCV cho camera
+
+Dùng OpenCV hệ thống đã build với GStreamer (trên Nano hiện tại là 4.1.1),
+được nhìn thấy qua `--system-site-packages`. Repo không cài OpenCV từ PyPI.
+Nếu `.venv` đã cài bản headless cũ, gỡ nó trước; `uv sync --inexact` giữ
+package ngoài lockfile nên không tự gỡ bản này:
+
+```sh
+uv pip uninstall opencv-python-headless
+```
+
+Kiểm tra ngay trong môi trường robot:
+
+```sh
+uv run --no-sync python - <<'PYTHON'
+import cv2
+print(cv2.__version__, cv2.__file__)
+for line in cv2.getBuildInformation().splitlines():
+    if "GStreamer" in line:
+        print(line)
+PYTHON
+```
+
+Đường dẫn phải tới bản hệ thống và backend phải báo `GStreamer: YES`.
+Nếu không import được `cv2`, kiểm tra `.venv/pyvenv.cfg` có
+`include-system-site-packages = true` và OpenCV hệ thống đã được cài cho
+Python 3.6 của JetPack. Không cài chồng `opencv-python`/headless để chữa lỗi.
+`JetCamera.start()` kiểm tra backend trước khi mở camera; teleop không bật
+camera vẫn dùng được OpenCV thiếu GStreamer. Backend đạt chưa bảo đảm camera
+vật lý hoặc pipeline sensor phù hợp.
 
 ### 4. Kiểm tra và cài PyTorch NVIDIA nếu thiếu
 
@@ -180,9 +211,9 @@ PYTHONPATH=src uv run --no-sync python -m unittest discover -s tests -v
 
 ## Giới hạn
 
-Camera CSI cần OpenCV có backend GStreamer phù hợp; bản headless hiện tại
-không cung cấp backend đó. Test trên máy phát triển không thay thế kiểm tra
-camera/motor trên Nano. Không cài nhiều package OpenCV vào cùng môi trường.
+Camera CSI dùng OpenCV hệ thống với backend GStreamer. Test trên máy phát
+triển không thay thế kiểm tra camera/motor trên Nano. Không cài nhiều package
+OpenCV vào cùng môi trường.
 
 Python 3.6 được giữ để tương thích JetPack cũ. Môi trường này chưa chạy nguyên
 bộ requirements PlaceNav (Python mới hơn, Torch 1.11 / CUDA 11.3).

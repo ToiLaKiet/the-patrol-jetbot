@@ -11,6 +11,7 @@ Test recorder ghi JPEG/CSV thật vào thư mục tạm bằng NumPy/OpenCV.
 
 | File | Kiểm tra |
 | --- | --- |
+| [test_camera.py](test_camera.py) | Chặn backend thiếu GStreamer trước khi mở camera, mở/đóng camera giả |
 | [test_main.py](test_main.py) | Tham số CLI, truyền teach_dir, dọn robot khi lỗi |
 | [test_teleop.py](test_teleop.py) | Mapping, vùng chết, slew rate, safety, motor và vòng đời teach |
 | [test_teach_recorder.py](test_teach_recorder.py) | Ảnh khớp CSV, lệnh dừng, lỗi camera/ghi đĩa, phiên riêng |

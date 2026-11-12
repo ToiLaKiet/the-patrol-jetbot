@@ -489,18 +489,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opencv-python-headless"
-version = "4.5.5.64"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/0e/eb390a76bff15ebc453c539bcc6bfdaff5b9ca9e566441dae45eb508a138/opencv-python-headless-4.5.5.64.tar.gz", hash = "sha256:c3c2dda44d601757a508b07d628537c49f31223ad4edd0f747a70d4c852a7b98", size = 89932966, upload-time = "2022-03-09T05:50:35.346Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/03/13447b012f11ed59948a1f09fc791bd2fbc32afca11a49eea75a4e683d1d/opencv_python_headless-4.5.5.64-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:567a54c1919bcf5b3d20a9830e3c511e57134de8def286ce137c3544a892f98c", size = 26701886, upload-time = "2022-03-09T05:48:23.356Z" },
-]
-
-[[package]]
 name = "packaging"
 version = "21.3"
 source = { registry = "https://pypi.org/simple" }
@@ -540,7 +528,6 @@ dependencies = [
     { name = "ipywidgets" },
     { name = "jetbot" },
     { name = "numpy" },
-    { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "pygame" },
     { name = "pygobject" },
@@ -558,7 +545,6 @@ requires-dist = [
     { name = "ipywidgets", specifier = "==7.7.2" },
     { name = "jetbot", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", git = "https://github.com/NVIDIA-AI-IOT/jetbot.git?tag=v0.4.3" },
     { name = "numpy", specifier = "==1.19.5" },
-    { name = "opencv-python-headless", specifier = "==4.5.5.64" },
     { name = "pillow", specifier = "==8.4.0" },
     { name = "pygame", specifier = "==2.6.1" },
     { name = "pygobject", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==3.42.2" },
