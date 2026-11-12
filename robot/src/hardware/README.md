@@ -36,7 +36,7 @@ Teleop hiện tại gọi `set_motors()` trực tiếp.
 `JetCamera.start()` dùng `Camera.instance()` ở 224 × 224 mặc định.
 `get_frame()` kiểm tra camera đã mở, frame không rỗng, rồi trả `frame.copy()`.
 Không có timestamp từ cảm biến hoặc kiểm tra frame bị đóng băng.
-Camera CSI cần backend GStreamer; xem [cài đặt](../../docs/README.md).
+Camera CSI cần backend GStreamer; xem [cài đặt](../../README.md#khởi-tạo-trên-jetbot).
 
 Tạo `PatrolJet` khởi tạo và dừng motor, chưa mở camera.
 `run_teleop()` dùng lại motor/safety hiện có. Nếu có `teach_dir`, nó gọi
