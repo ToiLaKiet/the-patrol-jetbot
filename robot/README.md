@@ -1,234 +1,72 @@
-# Robot Python environment
+# Robot
 
-The robot targets **Jetson Nano, JetPack 4.5 / L4T R32.5, CPython 3.6.9**.
-The uv project requires Python `>=3.6.9,<3.7`; `.python-version` selects 3.6.
-The lockfile targets Linux ARM64 (`aarch64`). It is not an environment for
-running the original PlaceNav stack unchanged on a desktop.
+Điều khiển JetBot bằng tay cầm USB và ghi hành trình teach trên **Jetson Nano,
+JetPack 4.5 / L4T R32.5, Python 3.6.9**. Hiện chạy teleop và ghi dữ liệu;
+chưa có luồng tự hành Teach & Repeat hoàn chỉnh.
 
-JetBot is NVIDIA's **unmodified v0.4.3**, installed from its official Git tag.
-There is no vendored package or import patch. Upstream imports its camera,
-heartbeat, JPEG encoder and ObjectDetector when importing `jetbot`, so all of
-those import dependencies, including TensorRT and PyTorch, must be present.
+## Chạy
 
-## Compatible versions
-
-| Component | Version / source |
-| --- | --- |
-| Python | System CPython 3.6.9, `/usr/bin/python3` on this Jetson |
-| JetBot | NVIDIA v0.4.3, Git commit pinned in `uv.lock` |
-| CUDA / TensorRT | JetPack 4.5 system libraries; Python 3.6 TensorRT bindings from apt |
-| PyTorch | NVIDIA `torch-1.10.0-cp36-cp36m-linux_aarch64.whl` for JetPack 4.x |
-| NumPy | 1.19.5 |
-| PyYAML / rospkg | 6.0.1 / 1.5.1 |
-| Pygame | 2.6.1 |
-| traitlets / ipywidgets | 4.3.3 / 7.7.2 |
-| ZeroMQ / Pillow | 22.3.0 / 8.4.0 |
-| OpenCV headless | 4.5.5.64 |
-| PyGObject | 3.42.2, supports the system GLib 2.56 / GI 1.56 |
-| setuptools | 59.6.0, provides upstream's `pkg_resources` |
-| Python backports | dataclasses 0.8, importlib-metadata 4.8.3 |
-
-The versions in TOML and the lockfile are resolved for Python 3.6. Changing
-`requires-python` alone does not convert an existing Python 3.8 environment.
-The code and tests also avoid newer Python APIs, and use the dataclasses and
-importlib metadata backports.
-
-## Prepare the Jetson
-
-Install uv using its standalone installer if it is not already available.
-Run these checks in the same host/container where the robot program will run:
-
-```sh
-cat /etc/nv_tegra_release
-/usr/bin/python3 --version
-uname -m
-```
-
-The intended combination is L4T R32.5, Python 3.6.9 and `aarch64`. An existing
-Jupyter container and an SSH host can have different installed packages even
-if both report `/usr/bin/python3`.
-
-Native build tools, Python headers, GStreamer and TensorRT bindings are system
-packages, installed outside uv:
-
-```sh
-sudo apt update
-sudo apt install git curl ca-certificates cmake build-essential pkg-config python3-dev libgirepository1.0-dev libcairo2-dev libglib2.0-dev libffi-dev libfreetype6-dev libpng-dev libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev gfortran libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good python3-libnvinfer
-```
-
-Use the NVIDIA apt repositories matching the installed JetPack, not a newer
-TensorRT/CUDA repository. CUDA/TensorRT development libraries and NVIDIA's
-`nvjpegenc` GStreamer plugin must be available in this host/container too.
-The JetBot installer builds its TensorRT plugin with CMake/Make. Pygame 2.6.1
-has a CPython 3.6 ARM64 wheel containing SDL 2.28.4, including the classic
-joystick interface used by the TGZ Controller. Prefer that wheel; a fallback
-source build links the system SDL, whose version/features must be checked.
-
-## Recreate the uv environment
-
-From `robot/`, move the existing Python 3.8 `.venv` outside the repository so
-it can be restored if needed. Run the move only if that old `.venv` exists:
-
-```sh
-mv .venv "$HOME/patrol-jetbot-venv-py38-$(date +%Y%m%d-%H%M%S)"
-uv venv --python /usr/bin/python3 --system-site-packages
-OPENBLAS_CORETYPE=ARMV8 uv sync --locked --inexact
-```
-
-`--system-site-packages` exposes the matching Python 3.6 TensorRT bindings from
-JetPack. `--inexact` preserves packages installed separately, such as NVIDIA's
-PyTorch wheel. Neither option exposes packages located inside another Docker
-container. uv still manages the project's ordinary Python dependencies.
-
-NumPy 1.19.5's bundled OpenBLAS can select an incompatible CPU kernel on
-Jetson Nano and terminate with SIGILL (illegal instruction). Export this
-setting before installation and ad hoc Python commands in the current shell:
-
-```sh
-export OPENBLAS_CORETYPE=ARMV8
-```
-
-`src/main.py` and `check_jetbot_env.py` set this default on ARM64 before loading
-native dependencies, preserving an explicit user setting. For `uv sync` and
-other commands use the export above or prefix the command with
-`OPENBLAS_CORETYPE=ARMV8`. See NumPy's issue:
-https://github.com/numpy/numpy/issues/18131
-
-Matplotlib is not a runtime dependency: no current robot code imports it.
-This avoids building an unused plotting library during teleop setup.
-
-If individual PyTorch imports pass but `import jetbot` fails with
-`libgomp.so.1: cannot allocate memory in static TLS block`, preload the system
-OpenMP runtime before starting uv/Python:
-
-```sh
-export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libgomp.so.1${LD_PRELOAD:+:$LD_PRELOAD}"
-uv run --no-sync python check_jetbot_env.py
-```
-
-Keep this export in the shell used to launch teleop too. Setting `LD_PRELOAD`
-inside an already-running Python process is too late for startup preloading.
-The command preserves other existing preloads. This ARM64 workaround is
-documented by NVIDIA:
-https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_FAQ.html#how-to-fix-cannot-allocate-memory-in-static-tls-block-error
-
-## Install NVIDIA PyTorch in uv
-
-First test whether a compatible PyTorch installation is already visible:
-
-```sh
-uv run --no-sync python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
-```
-
-If missing, download the NVIDIA wheel with its proper filename and install it
-into the project environment:
-
-```sh
-curl -fL https://nvidia.box.com/shared/static/fjtbno0vpo676a25cgvuqc1wty0fkkg6.whl -o /tmp/torch-1.10.0-cp36-cp36m-linux_aarch64.whl
-uv pip install /tmp/torch-1.10.0-cp36-cp36m-linux_aarch64.whl
-uv run --no-sync python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available())"
-```
-
-This ARM64/CUDA wheel is installed separately, not replaced with a generic
-PyPI `torch`. Keep using `uv sync --inexact`. NVIDIA lists this Python 3.6
-wheel for JetPack 4.4 through 4.6:
-https://forums.developer.nvidia.com/t/pytorch-for-jetson/72048/1276
-
-TensorRT comes from `python3-libnvinfer` for this JetPack. Verify it with:
-
-```sh
-uv run --no-sync python -c "import tensorrt; print(tensorrt.__version__)"
-```
-
-## Check imports and run teleop
-
-The checker reports all failing dependencies in one run, including the
-TensorRT/PyTorch imports, GStreamer/NVIDIA JPEG and JetBot's native plugin:
+[Cài đặt và xử lý lỗi Jetson](docs/README.md) trước, rồi chạy từ `robot/`:
 
 ```sh
 uv run --no-sync python check_jetbot_env.py
-```
-
-Only after those prerequisites pass does it test the full JetBot import in a
-child process. Upstream import starts its JPEG encoder; this checker never
-constructs `Robot` or sends motor commands. Source dependency metadata mirrors
-upstream `setup.py` so creating `uv.lock` does not require the native build on
-a development machine. Installation on Jetson still performs that build.
-Upstream may ignore CMake/Make errors, so sync success alone is insufficient.
-
-After the checker passes, raise the wheels and run:
-
-```sh
 uv run --no-sync python src/main.py
 ```
 
-To tune teleop without editing code:
+Đưa cần trái về giữa, thả L1 rồi giữ L1 để lái. Thả L1 để dừng;
+Ctrl+C để kết thúc. Mapping hiện tại: axes 0/1, L1 button 4.
+Kê bánh để kiểm tra chiều quay và thao tác dừng trước khi chạy dưới đất.
 
 ```sh
+# Ghi ảnh, timestamp và lệnh hai motor ở khoảng 5 Hz
+uv run --no-sync python src/main.py --teach-dir teach
+
+# Chỉnh độ nhạy và tốc độ thay đổi lệnh
 uv run --no-sync python src/main.py --max-speed 0.1 --deadzone 0.08 --slew-rate 0.3
-uv run --no-sync python src/main.py --help
 ```
 
-CLI defaults are `--max-speed 0.1`, `--deadzone 0.08`, `--slew-rate 0.5`.
-Max speed is a normalized motor command, capped by the motor layer, not m/s.
+Mặc định CLI: `max-speed=0.1`, `deadzone=0.08`, `slew-rate=0.5`.
+`max-speed` là lệnh motor chuẩn hóa, không phải m/s. Teach lưu từng phiên
+vào `teach/run_.../`; xem [định dạng dữ liệu](src/teach/README.md).
 
-Current mapping, verified while the pad reports `Microsoft X-Box 360 pad`:
-left stick axes 0/1 and L1 button 4. Bring the stick to center,
-release L1, then hold L1 to drive. Releasing L1 stops immediately. The teleop
-code sets `SDL_LINUX_JOYSTICK_CLASSIC=1` and supports SSH. See
-`src/teleop/README.md` for control behavior and motor-test precautions.
+## Luồng đang chạy
 
-Automated tests, without accessing motors:
+```mermaid
+flowchart TD
+    Pad["Tay cầm USB"] --> Teleop["Teleop · khoảng 50 Hz"]
+    Teleop --> Gate{"SafetyLayer.check"}
+    Gate -->|OK| Motors["JetMotors"]
+    Gate -->|Chặn| Stop["Dừng motor"]
+    Stop --> Motors
+    Motors --> Wheels["Hai motor JetBot"]
+    Motors -.->|Lệnh gần nhất| Recorder["TeachRecorder · khoảng 5 Hz"]
+    Camera["JetCamera"] -->|Ảnh| Recorder
+    Recorder --> Files["JPEG và samples.csv"]
+```
+
+Nhánh ghi chỉ bật khi có `--teach-dir`. Teleop kiểm tra lỗi recorder trước
+khi gửi lệnh; lỗi camera hoặc ghi đĩa kết thúc phiên và dừng motor.
+`PatrolJet` quản lý vòng đời; khi đóng, dừng motor rồi đóng recorder và camera.
+
+## Đọc code
+
+| Thư mục | Nội dung |
+| --- | --- |
+| [src](src/README.md) | Entry point và cách nối các thành phần |
+| [hardware](src/hardware/README.md) | Camera, motor và vòng đời robot |
+| [teleop](src/teleop/README.md) | Joystick, trộn lệnh và làm mượt |
+| [safety](src/safety/README.md) | Điều kiện chặn và giới hạn vận tốc |
+| [teach](src/teach/README.md) | Recorder và định dạng dữ liệu |
+| [humandetector](src/humandetector/README.md) | Code nhận diện người chưa tích hợp |
+| [mapping](src/mapping/README.md), [navigation](src/navigation/README.md) | File giữ chỗ, chưa triển khai |
+| [tests](tests/README.md) | Kiểm tra tự động bằng phần cứng giả |
+
+## Kiểm tra
 
 ```sh
 PYTHONPATH=src uv run --no-sync python -m unittest discover -s tests -v
 ```
 
-## Record a teach run
-
-From `robot/`, run teleop with recording enabled:
-
-```sh
-uv run --no-sync python src/main.py --teach-dir teach
-```
-
-Each run creates a unique `teach/run_YYYYMMDD_HHMMSS_.../` directory with
-numbered JPEG files in `images/` and `samples.csv`. Recording runs in a
-background thread at about 5 Hz; slow storage reduces the recording rate
-without waiting for disk writes in the joystick loop. The camera starts only
-when recording is requested. Release L1 to stop driving, or Ctrl+C to finish.
-Camera or recording errors end teleop and stop the motors. Normal cleanup
-stops the motors before joining the recorder and closing the camera.
-
-CSV columns are `image,frame_read_s,command_s,left,right`. Times use a
-monotonic clock relative to the start of recording. `command_s` is the time
-of the latest successful motor command before reading the frame; it can be
-slightly negative for the initial stop before recording started. `left` and
-`right` are normalized commands after the duty limit, before the JetBot
-driver's motor calibration, not measured wheel speeds. Stops are `(0, 0)`.
-Commands between samples are not recorded. An image is written before its
-CSV row, and CSV is flushed after each sample; sudden power loss can still
-lose buffered data or leave an image without a CSV row.
-
-The frame timestamp marks the read, not sensor exposure. The current camera
-API returns the latest frame and does not expose capture timestamps or detect
-a frozen stream. This mode requires a working JetBot camera backend; the
-headless OpenCV wheel alone cannot open the CSI GStreamer pipeline (see below).
-Teach recording does not require ROS or the PlaceNav dependencies.
-
-## Limits and later navigation work
-
-The OpenCV wheel provides `cv2` for imports and CPU image processing; it does
-not provide the CSI camera's GStreamer backend. Camera use needs a matching
-GStreamer-enabled OpenCV build and an updated dependency/source declaration.
-Do not install multiple OpenCV packages into the same environment.
-
-The original PlaceNav requirements use PyTorch 1.11 / CUDA 11.3 and a newer
-Python environment. This legacy robot environment does not claim to run that
-stack unchanged. Porting models/dependencies or running navigation in another
-environment still requires separate validation. Model-conversion tools such
-as TensorFlow/UFF/GraphSurgeon are not needed for teleop and are not installed.
-
-Python 3.6 is an end-of-life runtime chosen for this legacy JetPack. Native
-imports and motor behavior still require validation on the actual Jetson;
-resolution and mock-based tests on a development machine do not prove those.
+Camera CSI cần OpenCV có backend GStreamer phù hợp; bản headless hiện tại
+không cung cấp backend đó. Test trên máy phát triển không thay thế kiểm tra
+camera/motor trên Nano. Xem [giới hạn môi trường](docs/README.md#limits).
