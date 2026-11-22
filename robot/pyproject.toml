@@ -1,0 +1,35 @@
+[project]
+name = "patrol-jetbot-robot"
+version = "0.1.0"
+requires-python = ">=3.6.9,<3.7"
+dependencies = [
+    "numpy==1.19.5",
+    "pyyaml==6.0.1",
+    "rospkg==1.5.1",
+    "pygame==2.6.1",
+    "traitlets==4.3.3",
+    "ipywidgets==7.7.2",  # JetBot imports Heartbeat even for motor-only use.
+    "pyzmq==22.3.0",
+    "pillow==8.4.0",
+    "setuptools==59.6.0",
+    "dataclasses==0.8",
+    "importlib-metadata==4.8.3",
+    # Compatible with GLib 2.56 / GI 1.56 from Ubuntu 18.04 (JetPack 4.5).
+    "PyGObject==3.42.2; sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "jetbot; sys_platform == 'linux' and platform_machine == 'aarch64'",
+]
+
+[tool.uv]
+environments = ["sys_platform == 'linux' and platform_machine == 'aarch64'"]
+
+[tool.uv.sources]
+jetbot = { git = "https://github.com/NVIDIA-AI-IOT/jetbot.git", tag = "v0.4.3" }
+
+# Match upstream setup.py so locking on development machines does not run Jetson's native build.
+[[tool.uv.dependency-metadata]]
+name = "jetbot"
+version = "0.4.3"
+requires-dist = ["Adafruit-MotorHAT", "Adafruit-SSD1306"]
+
+# OpenCV (with GStreamer) and TensorRT come from JetPack via --system-site-packages.
+# Install NVIDIA's torch 1.10.0 CPython 3.6 / ARM64 wheel separately with uv pip.

@@ -1,57 +1,21 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environments
-.venv
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Environment Variables
-.env
-.env.local
-
-# Database & Runtime Data
-*.sqlite
-*.sqlite3
-*.db
-backend/data/*.db
-backend/data/uploads/*
-backend/data/keyframes/*
-!backend/data/uploads/.gitkeep
-!backend/data/keyframes/.gitkeep
-
-# IDE & OS
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
 .DS_Store
-Thumbs.db
+robot/.venv/
+robot/teach/
+checklist.md
+__pycache__/
 
-# Pytest / Coverage
+# Python & Backend
+*.py[cod]
+*.egg-info/
 .pytest_cache/
 .coverage
-htmlcov/
+.env
+.env.local
+app/backend/.venv/
+app/backend/*.db
+app/backend/*.sqlite
+app/backend/*.sqlite3
+app/backend/storage/routes/*
+app/backend/storage/evidences/*
+!app/backend/storage/routes/.gitkeep
+!app/backend/storage/evidences/.gitkeep
