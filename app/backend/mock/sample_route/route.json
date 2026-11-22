@@ -1,0 +1,37 @@
+{
+  "name": "Hành lang A1 - Tuyến mẫu",
+  "description": "Tuyến tuần tra mẫu 5 checkpoint cho kiểm thử Teach & Repeat",
+  "total_duration_s": 8.0,
+  "checkpoints": [
+    {
+      "seq": 0,
+      "keyframe": "keyframes/000000.jpg",
+      "timestamp_offset": 0.0,
+      "command_summary": "left=0.000, right=0.000"
+    },
+    {
+      "seq": 1,
+      "keyframe": "keyframes/000001.jpg",
+      "timestamp_offset": 2.0,
+      "command_summary": "left=0.200, right=0.200"
+    },
+    {
+      "seq": 2,
+      "keyframe": "keyframes/000002.jpg",
+      "timestamp_offset": 4.0,
+      "command_summary": "left=0.200, right=0.140"
+    },
+    {
+      "seq": 3,
+      "keyframe": "keyframes/000003.jpg",
+      "timestamp_offset": 6.0,
+      "command_summary": "left=0.200, right=0.200"
+    },
+    {
+      "seq": 4,
+      "keyframe": "keyframes/000004.jpg",
+      "timestamp_offset": 8.0,
+      "command_summary": "left=0.000, right=0.000"
+    }
+  ]
+}
