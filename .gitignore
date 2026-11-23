@@ -1,5 +1,4 @@
 .DS_Store
 robot/.venv/
 robot/teach/
-checklist.md
 __pycache__/
