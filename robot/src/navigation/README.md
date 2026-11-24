@@ -1,6 +1,6 @@
 # Navigation
 
-[main.py](main.py) là điểm vào của `main.py navigation`. Luồng dự kiến theo
+[main.py](main.py) là entry point độc lập của Navigation. Luồng dự kiến theo
 PlaceNav: **inference/định vị → chọn subgoal → GNM predict waypoints →
 PD controller đổi sang `(v, omega)` → safety → `drive()`**.
 
@@ -13,9 +13,14 @@ PD controller đổi sang `(v, omega)` → safety → `drive()`**.
 | Safety | [safety.py](../safety/safety.py) | Đã có, chưa nối với Navigation |
 | `(v, omega)` → hai bánh | [motors.py](../hardware/motors.py) | Đã có `JetMotors.drive()`, chưa nối với Navigation |
 
-Hiện chạy `main.py navigation` sẽ báo chưa triển khai và thoát trước khi
+Chạy từ `robot/`:
+
+```sh
+uv run --no-sync python src/navigation/main.py
+```
+
+Hiện lệnh này sẽ báo chưa triển khai và thoát trước khi
 khởi tạo camera/motor. Chưa có chế độ tự hành hoạt động.
 
-Model đã chạy độc lập trong [infer_sample.py](../../scripts/infer_sample.py).
-Preprocessing dùng chung [utils.preprocess_frame](../utils.py). Các phần này
-sẽ được dùng lại khi triển khai Navigation; không sao chép ROS node vào entry point.
+Kết quả kiểm tra model đã có trong [checklist](../../../checklist.md).
+Preprocessing dùng chung [utils.preprocess_frame](../utils.py).

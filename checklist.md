@@ -4,7 +4,8 @@ Mục tiêu: giữ thư viện JetBot cho camera/motor, port phần tính toán 
 Yêu cầu PlaceNav/Repeat của dự án: cập nhật waypoint ở 5 Hz (200 ms/vòng).
 Checklist dành cho một người: làm lần lượt từ bước 1 đến bước 6.
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
-Entry point đã tách `teach` và `navigation`; ROSBag, tạo TOPOMAP và các bước
+Hai entry point chạy độc lập: `src/teach/main.py` và `src/navigation/main.py`;
+ROSBag, tạo TOPOMAP và các bước
 Navigation hiện là file trống, chưa được tính là hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
@@ -36,8 +37,6 @@ Chưa xác nhận toàn pipeline camera/preprocessing/localization đạt 5 Hz h
 
 - [x] Frame JetCamera là **BGR**, shape `(224, 224, 3)`, dtype `uint8`; đã đối chiếu `assume_bgr.png` đúng màu vật thật.
 - [x] [Preprocessing dùng chung](robot/src/utils.py): BGR → RGB → tensor → resize rộng 85 × cao 64 (antialias) → normalize mean `[0.485, 0.456, 0.406]`, std `[0.229, 0.224, 0.225]`; output `float32 [3, 64, 85]`, dùng trong script inference.
-- [ ] Giữ 5 ảnh trước + ảnh hiện tại theo đúng thứ tự với cấu hình GNM mặc định.
-- [ ] Kiểm tra context `[1, 18, 64, 85]`, ảnh subgoal `[1, 3, 64, 85]`, output waypoint `[1, 5, 4]`.
 - [ ] Kiểm soát nhịp lấy context và timestamp; không coi frame lặp/quá hạn là ảnh mới. Code gốc thêm ảnh theo callback camera.
 - [ ] Dùng cùng preprocessing cho ảnh topomap và ảnh Repeat.
 

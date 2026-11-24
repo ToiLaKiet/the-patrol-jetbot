@@ -2,8 +2,8 @@
 
 [teleop.py](teleop.py) đọc tay cầm USB bằng Pygame trên thread chính,
 tạo lệnh hai bánh ở khoảng 50 Hz. Dùng motor và safety do `PatrolJet`
-truyền vào; recorder là tùy chọn ở API. CLI `main.py teach` bật recorder
-mặc định; lệnh chạy nằm ở [README robot](../../README.md).
+truyền vào; recorder là tùy chọn ở API. CLI `src/teach/main.py` bật recorder
+mặc định; lệnh chạy nằm ở [README gốc](../../../README.md).
 
 ## Xử lý lệnh
 
@@ -58,6 +58,3 @@ qua `SafetyInput`. Khi có recorder, lỗi camera/ghi đĩa đi qua `recorder.ch
 Ctrl+C, SDL yêu cầu thoát, mất tay cầm hoặc exception đều dừng motor và dọn
 Pygame trong `finally`. Đây là dừng bằng phần mềm, không bảo đảm khi tiến trình
 hoặc hệ điều hành treo; muốn bảo đảm cần watchdog phần cứng/driver.
-
-[Test teleop và motor](../../tests/test_teleop.py) kiểm tra mapping, vùng chết,
-làm mượt, L1, safety, ngắt kết nối và dọn tài nguyên.

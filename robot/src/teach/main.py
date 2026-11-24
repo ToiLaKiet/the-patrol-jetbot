@@ -1,5 +1,38 @@
 """Teach stage: joystick and the existing JPEG/CSV recorder."""
 
+import argparse
+import math
+import os
+from pathlib import Path
+import platform
+import sys
+
+# NumPy on Nano needs this before importing JetBot's native dependencies.
+if platform.machine() == "aarch64":
+    os.environ.setdefault("OPENBLAS_CORETYPE", "ARMV8")
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Teach: lái JetBot và thu dữ liệu.")
+    parser.add_argument("--max-duty", "--max-speed", type=float, default=0.1,
+                        help="Giới hạn duty chuẩn hóa (0, 1], không phải m/s (mặc định: 0.1).")
+    parser.add_argument("--deadzone", type=float, default=0.08,
+                        help="Vùng chết joystick [0, 1) (mặc định: 0.08).")
+    parser.add_argument("--slew-rate", type=float, default=0.5,
+                        help="Mức thay đổi lệnh motor mỗi giây, > 0 (mặc định: 0.5).")
+    parser.add_argument("--teach-dir", default="teach",
+                        help="Thư mục lưu JPEG + CSV ở khoảng 5 Hz (mặc định: teach).")
+    args = parser.parse_args(argv)
+    if not (math.isfinite(args.max_duty) and 0 < args.max_duty <= 1):
+        parser.error("--max-duty phải hữu hạn và trong khoảng (0, 1].")
+    if not (math.isfinite(args.deadzone) and 0 <= args.deadzone < 1):
+        parser.error("--deadzone phải hữu hạn và trong khoảng [0, 1).")
+    if not (math.isfinite(args.slew_rate) and args.slew_rate > 0):
+        parser.error("--slew-rate phải hữu hạn và lớn hơn 0.")
+    return run(args)
+
 
 def run(args):
     print("Teach: joystick + JPEG/CSV. ROSBag và tạo TOPOMAP chưa triển khai.", flush=True)
@@ -11,3 +44,7 @@ def run(args):
                          slew_rate=args.slew_rate, teach_dir=args.teach_dir)
     finally:
         robot.close()
+
+
+if __name__ == "__main__":
+    main()

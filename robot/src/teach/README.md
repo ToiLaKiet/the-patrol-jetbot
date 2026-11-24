@@ -1,6 +1,6 @@
 # Teach
 
-[main.py](main.py) chạy giai đoạn Teach, được gọi từ `main.py teach`.
+[main.py](main.py) là entry point độc lập của giai đoạn Teach.
 
 Luồng dự kiến: **Joystick → Collect ROSBag → create TOPOMAP**. Joystick chạy
 đồng thời với việc thu dữ liệu; tạo TOPOMAP sau khi kết thúc phiên.
@@ -15,7 +15,7 @@ Luồng dự kiến: **Joystick → Collect ROSBag → create TOPOMAP**. Joystic
 Chạy từ `robot/`:
 
 ```sh
-uv run --no-sync python src/main.py teach --teach-dir teach
+uv run --no-sync python src/teach/main.py --teach-dir teach
 ```
 
 Mặc định ghi vào `teach/`. Giai đoạn hiện tại dùng [recorder.py](recorder.py),
@@ -58,6 +58,3 @@ và đóng CSV, sau đó mới đóng camera.
 Timestamp là lúc đọc, không phải lúc phơi sáng. Camera trả frame mới nhất,
 chưa phát hiện stream đóng băng. Flush CSV không bảo đảm dữ liệu sống qua mất
 điện đột ngột; có thể còn ảnh không có dòng CSV nếu lỗi sau bước ghi ảnh.
-
-[Test recorder](../../tests/test_teach_recorder.py) kiểm tra ảnh khớp CSV,
-lệnh chạy/dừng, lỗi ghi và các thư mục phiên không ghi đè nhau.
