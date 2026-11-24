@@ -10,7 +10,7 @@ from PIL import Image
 import torch
 from torchvision import models
 
-import infer_sample
+from scripts import infer_sample
 
 
 SOURCE = Path(__file__).resolve().parents[2] / "PlaceNav/src"
@@ -110,25 +110,29 @@ class SampleInferenceTests(unittest.TestCase):
                                    torch.zeros(1, 3, 64, 85), torch.device("cpu"), 1, 1)
         self.assertNotIn("OK:", output.getvalue())
 
-    def test_benchmark_main_keeps_both_models_loaded(self):
+    def test_benchmark_defaults_and_both_models_loaded(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "src/placenav/models").mkdir(parents=True)
+            root = Path(directory).resolve() / "robot"
+            (root.parent / "PlaceNav/src/placenav/models").mkdir(parents=True)
+            (root / "checkpoints").mkdir(parents=True)
             for name in ("gnm_large.pth", "efficientnet_85x85.pth"):
-                (root / name).touch()
+                (root / "checkpoints" / name).touch()
             image = root / "sample.png"
             Image.new("RGB", (85, 64)).save(str(image))
             gnm, cosplace = torch.nn.Identity(), torch.nn.Identity()
-            with patch.object(infer_sample, "load_gnm", return_value=gnm), \
-                    patch.object(infer_sample, "load_cosplace", return_value=cosplace), \
+            with patch.object(infer_sample, "__file__", str(root / "scripts/infer_sample.py")), \
+                    patch.object(infer_sample, "load_gnm", return_value=gnm) as load_gnm, \
+                    patch.object(infer_sample, "load_cosplace", return_value=cosplace) as load_cosplace, \
                     patch.object(infer_sample, "benchmark") as run, \
                     patch.object(sys, "path", list(sys.path)), \
                     contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(infer_sample.main([
                     "--context", str(image), "--goal", str(image), "--benchmark",
-                    "--placenav-dir", str(root), "--checkpoint-dir", str(root), "--device", "cpu",
+                    "--device", "cpu",
                 ]), 0)
             self.assertEqual(run.call_args[0][0], {"gnm": gnm, "cosplace": cosplace})
+            load_gnm.assert_called_once_with(root / "checkpoints/gnm_large.pth")
+            load_cosplace.assert_called_once_with(root / "checkpoints/efficientnet_85x85.pth")
 
     @unittest.skipUnless((SOURCE / "placenav/models").is_dir(), "Cần source PlaceNav")
     def test_original_checkpoint_class_path_is_resolved(self):

@@ -1,5 +1,8 @@
 # Navigation
 
+Tiền xử lý ảnh dùng [preprocess_frame trong utils.py](../utils.py), dùng chung
+cho frame camera và ảnh file trong `scripts/infer_sample.py`.
+
 [mapping.py](mapping.py) hiện là file trống. Thư mục này chưa có vòng lặp
 định vị, chọn mục tiêu hoặc điều khiển tự hành; `main.py` chưa gọi nó.
 

@@ -4,6 +4,8 @@
 JetPack 4.5 / L4T R32.5, Python 3.6.9**. Hiện chạy teleop và ghi dữ liệu;
 chưa có luồng tự hành Teach & Repeat hoàn chỉnh.
 
+`scripts/` chứa các công cụ CLI kiểm tra môi trường và chạy inference mẫu.
+
 ## Khởi tạo trên JetBot
 
 
@@ -136,7 +138,7 @@ nên PyTorch/TensorRT vẫn cần cho cả chế độ chỉ điều khiển mot
 
 ## Inference độc lập với ảnh mẫu
 
-Script [infer_sample.py](infer_sample.py) chỉ đọc ảnh và checkpoint, không import
+Script [scripts/infer_sample.py](scripts/infer_sample.py) chỉ đọc ảnh và checkpoint, không import
 JetBot, ROS hoặc mở camera/motor. Cần source PlaceNav tại `../PlaceNav` (tính từ
 `robot/`); nếu chưa có, clone từ thư mục gốc repo:
 
@@ -153,7 +155,7 @@ GNM lưu cả đối tượng Python, nên `torch.load` sẽ giải pickle.
 Chạy từ `robot/`, thay đường dẫn ảnh bằng JPEG/PNG đã có (có thể dùng ảnh teach):
 
 ```sh
-uv run --no-sync python infer_sample.py \
+uv run --no-sync python scripts/infer_sample.py \
   --context /duong/dan/anh_hien_tai.jpg \
   --goal /duong/dan/anh_subgoal.jpg \
   --device cuda
@@ -168,12 +170,13 @@ Một ảnh context được lặp 6 lần và được ghi rõ là smoke test. 
 thật, truyền đúng 6 ảnh theo thứ tự 5 ảnh trước → ảnh hiện tại:
 
 ```sh
-uv run --no-sync python infer_sample.py \
+uv run --no-sync python scripts/infer_sample.py \
   --context 0.jpg 1.jpg 2.jpg 3.jpg 4.jpg 5.jpg --goal subgoal.jpg
 ```
 
-Preprocessing giữ thứ tự của PlaceNav: RGB → tensor → resize rộng 85 × cao 64
-với antialias → normalize ImageNet. CosPlace dùng ảnh hiện tại với cùng
+Preprocessing dùng chung [preprocess_frame](src/utils.py):
+ảnh file đọc bằng OpenCV hoặc frame JetCamera BGR → RGB → tensor → resize
+rộng 85 × cao 64 với antialias → normalize ImageNet. CosPlace dùng ảnh hiện tại với cùng
 preprocessing như luồng navigation gốc. Script nạp weights strict, xử lý
 đường dẫn class GNM cũ `gnm_train.models.gnm.GNM`, và không tải thêm weights
 ImageNet khi dựng EfficientNet-B0.
@@ -191,7 +194,7 @@ GNM → CosPlace mỗi vòng:
 ```sh
 cd ~/the-patrol-jetbot/robot &&
 for model in gnm cosplace both; do
-  .venv/bin/python infer_sample.py \
+  .venv/bin/python scripts/infer_sample.py \
     --context ../PlaceNav/doc/githeader_hor.png \
     --goal ../PlaceNav/doc/githeader_hor.png \
     --device cuda --model "$model" --benchmark --warmup 10 --runs 30 || break
@@ -221,7 +224,7 @@ vào thư mục này; `uv run --no-sync` tự dùng `.venv`, không cần kích 
 Kiểm tra dependency trước:
 
 ```sh
-uv run --no-sync python check_jetbot_env.py
+uv run --no-sync python scripts/check_jetbot_env.py
 uv run --no-sync python -c "import torch; print('CUDA:', torch.cuda.is_available())"
 ```
 

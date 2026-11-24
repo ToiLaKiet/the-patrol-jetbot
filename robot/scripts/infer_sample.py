@@ -16,8 +16,11 @@ if platform.machine() == "aarch64":
     os.environ.setdefault("OPENBLAS_CORETYPE", "ARMV8")
 
 import torch
-from torchvision import models, transforms
-from PIL import Image
+import cv2
+from torchvision import models
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from utils import preprocess_frame
 
 
 class GNMUnpickler(pickle.Unpickler):
@@ -61,15 +64,12 @@ def load_cosplace(path):
 def prepare_inputs(paths, goal_path):
     if len(paths) not in (1, 6):
         raise ValueError("Context cần 1 ảnh thử hoặc 6 ảnh theo thứ tự cũ → mới.")
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((64, 85), antialias=True),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ])
     images = []
     for path in list(paths) + [goal_path]:
-        with Image.open(str(path)) as image:
-            images.append(transform(image.convert("RGB")))
+        frame = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise OSError("Không đọc được ảnh: {}".format(path))
+        images.append(preprocess_frame(frame))
     context = images[:-1]
     # shortcut: repeating one image only tests inference, use six real frames for navigation.
     if len(context) == 1:
@@ -142,7 +142,7 @@ def benchmark(loaded, context, goal, device, warmup, runs):
 
 
 def main(argv=None):
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--context", type=Path, nargs="+", required=True,
                         help="1 ảnh thử hoặc 6 ảnh từ cũ đến mới (ảnh hiện tại ở cuối).")

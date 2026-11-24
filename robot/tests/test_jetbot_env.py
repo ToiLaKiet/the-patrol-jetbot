@@ -7,7 +7,7 @@ import subprocess
 import unittest
 from unittest.mock import Mock, patch
 
-import check_jetbot_env
+from scripts import check_jetbot_env
 
 
 class EnvironmentCheckTests(unittest.TestCase):
