@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PIL import Image
 import torch
@@ -60,6 +60,75 @@ class SampleInferenceTests(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
             infer_sample.main(["--context", "a", "b", "--goal", "c"])
         self.assertEqual(error.exception.code, 2)
+
+    def test_cli_rejects_empty_benchmark(self):
+        for option in ("--runs", "--warmup"):
+            with self.subTest(option=option), contextlib.redirect_stderr(io.StringIO()), \
+                    self.assertRaises(SystemExit) as error:
+                infer_sample.main(["--context", "a", "--goal", "b", "--benchmark", option, "0"])
+            self.assertEqual(error.exception.code, 2)
+
+    def test_benchmark_excludes_warmup_and_validation_from_cuda_timing(self):
+        events = []
+        loaded = {
+            "gnm": Mock(side_effect=lambda *_: events.append("gnm") or
+                        (torch.zeros(1, 1), torch.zeros(1, 5, 4))),
+            "cosplace": Mock(side_effect=lambda *_: events.append("cosplace") or
+                             torch.ones(1, 512)),
+        }
+        ticks = iter((1.0, 1.01, 2.0, 2.02))
+
+        def clock():
+            events.append("clock")
+            return next(ticks)
+
+        def check(*_):
+            events.append("validate")
+
+        output = io.StringIO()
+        with patch.object(infer_sample.time, "perf_counter", side_effect=clock), \
+                patch.object(infer_sample.torch.cuda, "synchronize",
+                             side_effect=lambda *_: events.append("sync")), \
+                patch.object(infer_sample.torch.cuda, "reset_peak_memory_stats"), \
+                patch.object(infer_sample, "check_tensor", side_effect=check), \
+                patch.object(infer_sample, "report_memory"), contextlib.redirect_stdout(output):
+            infer_sample.benchmark(loaded, torch.zeros(1, 18, 64, 85),
+                                   torch.zeros(1, 3, 64, 85), torch.device("cuda"), 2, 2)
+        self.assertEqual(loaded["gnm"].call_count, 4)
+        self.assertEqual(loaded["cosplace"].call_count, 4)
+        first_clock = events.index("clock")
+        self.assertEqual(events[:first_clock].count("gnm"), 2)
+        self.assertEqual(events[first_clock:first_clock + 8],
+                         ["clock", "gnm", "cosplace", "sync", "clock", "validate", "validate", "validate"])
+        self.assertIn("mean=15.00 ms", output.getvalue())
+
+    def test_benchmark_rejects_nonfinite_measured_output(self):
+        model = Mock(side_effect=[torch.ones(1, 512), torch.full((1, 512), float("nan"))])
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertRaises(ValueError):
+            infer_sample.benchmark({"cosplace": model}, torch.zeros(1, 18, 64, 85),
+                                   torch.zeros(1, 3, 64, 85), torch.device("cpu"), 1, 1)
+        self.assertNotIn("OK:", output.getvalue())
+
+    def test_benchmark_main_keeps_both_models_loaded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src/placenav/models").mkdir(parents=True)
+            for name in ("gnm_large.pth", "efficientnet_85x85.pth"):
+                (root / name).touch()
+            image = root / "sample.png"
+            Image.new("RGB", (85, 64)).save(str(image))
+            gnm, cosplace = torch.nn.Identity(), torch.nn.Identity()
+            with patch.object(infer_sample, "load_gnm", return_value=gnm), \
+                    patch.object(infer_sample, "load_cosplace", return_value=cosplace), \
+                    patch.object(infer_sample, "benchmark") as run, \
+                    patch.object(sys, "path", list(sys.path)), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(infer_sample.main([
+                    "--context", str(image), "--goal", str(image), "--benchmark",
+                    "--placenav-dir", str(root), "--checkpoint-dir", str(root), "--device", "cpu",
+                ]), 0)
+            self.assertEqual(run.call_args[0][0], {"gnm": gnm, "cosplace": cosplace})
 
     @unittest.skipUnless((SOURCE / "placenav/models").is_dir(), "Cần source PlaceNav")
     def test_original_checkpoint_class_path_is_resolved(self):

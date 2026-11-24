@@ -183,6 +183,35 @@ shape descriptor `[1, 512]` và L2 norm. Input/output sai shape hoặc có NaN/I
 làm script thất bại. Đây là kiểm tra inference, chưa đánh giá navigation,
 benchmark sau warm-up hoặc khả năng giữ cả hai model cùng lúc trong RAM Nano.
 
+Để đo thời gian sau warm-up và bộ nhớ trên Nano, cập nhật script rồi chạy
+khối sau từ terminal. Mỗi lượt `gnm`, `cosplace`, `both` là một tiến trình mới;
+ở lượt `both`, hai model được giữ cùng lúc trong bộ nhớ và chạy lần lượt
+GNM → CosPlace mỗi vòng:
+
+```sh
+cd ~/the-patrol-jetbot/robot &&
+for model in gnm cosplace both; do
+  .venv/bin/python infer_sample.py \
+    --context ../PlaceNav/doc/githeader_hor.png \
+    --goal ../PlaceNav/doc/githeader_hor.png \
+    --device cuda --model "$model" --benchmark --warmup 10 --runs 30 || break
+done
+```
+
+Output có thời gian forward mean/p50/min/max (ms), peak RSS của tiến trình
+từ lúc bắt đầu (gồm cả nạp checkpoint), `VmRSS`/`VmHWM` trên Linux và bộ nhớ
+allocated/reserved của allocator PyTorch CUDA. Peak CUDA được đặt lại sau
+warm-up. CUDA được synchronize trước/sau mỗi lượt đo; kiểm tra shape/NaN/Inf
+ở mọi lượt warm-up và đo, bên ngoài khoảng thời gian forward. Với `both`,
+thời gian là tổng forward của hai model trong một vòng. Phép đo không bao gồm
+đọc ảnh, preprocessing, nạp model hoặc truyền ảnh từ CPU lên GPU.
+
+Nano dùng RAM chung cho CPU/GPU: không cộng RSS với số đo allocator CUDA để
+suy ra tổng RAM. Có thể mở terminal khác chạy `tegrastats --interval 500`
+để theo dõi RAM toàn hệ thống trong suốt phép thử. Ảnh lặp chỉ kiểm tra khả
+năng chạy và hiệu năng mẫu; không dùng số đo này để kết luận độ chính xác
+navigation. Lưu output cả ba lượt trước khi đánh dấu task benchmark hoàn tất.
+
 ## Chạy
 
 Sau khi cài môi trường ở trên, chạy từ `robot/`. Những lần sau chỉ cần

@@ -2,7 +2,7 @@
 
 Mục tiêu: giữ thư viện JetBot cho camera/motor, port phần tính toán PlaceNav.
 Checklist dành cho một người: làm lần lượt từ bước 1 đến bước 6.
-Chưa có kết quả nạp checkpoint hay benchmark trên Nano.
+Đã chạy inference mẫu hai checkpoint trên CUDA của Nano; chưa benchmark.
 
 ## Nền tảng đã có
 
@@ -22,10 +22,10 @@ trên phần cứng trong lần rà source này.
 - [x] Ghi lại JetPack, Python, PyTorch, torchvision và CUDA thực tế.
 - [x] Tải checkpoint `gnm_large.pth` và `efficientnet_85x85.pth` từ nguồn PlaceNav.
 - [x] Tạo script inference độc lập dùng ảnh mẫu, chưa điều khiển motor: [infer_sample.py](robot/infer_sample.py), [cách chạy](robot/README.md#inference-độc-lập-với-ảnh-mẫu).
-- [ ] Kiểm tra tương thích torchvision: `ConvNormActivation`, `InvertedResidual`, `_make_divisible` và `Resize(..., antialias=True)`.
-- [ ] Điều chỉnh API không tương thích, giữ kiến trúc và preprocessing tương đương bản gốc.
-- [ ] Nạp GNM: loader gốc đọc đối tượng model qua `checkpoint["model"]`, có thể phụ thuộc class/module lúc lưu.
-- [ ] Nạp CosPlace với EfficientNet-B0, descriptor 512 chiều.
+- [x] Kiểm tra tương thích torchvision: `ConvNormActivation`, `InvertedResidual`, `_make_divisible` và `Resize(..., antialias=True)` đã được dùng thành công trong inference mẫu trên Nano.
+- [x] Điều chỉnh API không tương thích, giữ kiến trúc và preprocessing tương đương bản gốc: không cần đổi bốn API torchvision trên trong luồng inference mẫu.
+- [x] Nạp GNM: xử lý đường dẫn class cũ `gnm_train.models.gnm.GNM` và nạp weights strict từ `checkpoint["model"]`; đã chạy trên CUDA của Nano.
+- [x] Nạp CosPlace với EfficientNet-B0, descriptor 512 chiều; đã chạy trên CUDA của Nano.
 - [ ] Chạy từng model rồi cả hai trong cùng tiến trình; kiểm tra shape, giá trị hữu hạn, RAM và thời gian inference sau warm-up.
 - [ ] Dựa vào số đo để quyết định có cần tối ưu hoặc chuyển TensorRT.
 
@@ -48,14 +48,27 @@ Môi trường robot được kiểm tra bằng
 | CUDA dùng để build PyTorch | `10.2` |
 | `torch.cuda.is_available()` | `True` |
 
-Kết quả trên xác nhận import và phát hiện GPU; chưa kiểm tra inference GNM/CosPlace trên Nano.
+Phép thử CLI riêng trên Nano do người dùng cung cấp (2026-11-24), với
+PyTorch `1.10.0` / torchvision `0.11.1`: cả `ConvNormActivation`,
+`InvertedResidual`, `_make_divisible` và `Resize(..., antialias=True)` trên
+tensor đều báo `OK`; kết quả cuối `PASS`. Không cần đổi bốn API này cho
+luồng inference mẫu hiện tại.
 
 Script `robot/infer_sample.py` đã chạy trên máy phát triển bằng CPU
 (Python `3.10.16`, Torch `2.12.1`, torchvision `0.27.1`) với hai checkpoint
 Drive ở trên và ảnh `PlaceNav/doc/githeader_hor.png` lặp làm context.
 GNM trả distance `[1, 1]`, waypoint `[1, 5, 4]`; CosPlace trả descriptor
 `[1, 512]`, L2 norm `1.0`; các output hữu hạn. Cả 42 test tự động đều qua,
-gồm 6 test cho script. Chưa chạy script trên Nano hoặc benchmark sau warm-up.
+gồm 6 test cho script.
+
+Kết quả inference trên Nano do người dùng cung cấp (2026-11-24): chạy
+`infer_sample.py --device cuda` với cùng ảnh mẫu lặp làm context, lần lượt
+GNM rồi CosPlace trong cùng tiến trình. Context `[1, 18, 64, 85]`, ảnh goal
+`[1, 3, 64, 85]`; GNM trả distance `[1, 1]` (giá trị `-0.08656612038612366`)
+và waypoint `[1, 5, 4]`; CosPlace trả descriptor `[1, 512]`, L2 norm `1.0`.
+Script kết thúc thành công, các output hữu hạn. Đây là smoke test với một
+ảnh lặp, chưa đánh giá độ chính xác trên context chuyển động thực, RAM,
+thời gian inference sau warm-up hoặc khả năng giữ cả hai model cùng lúc trong RAM.
 
 Điều kiện hoàn thành: cả hai model chạy được trên Nano và có số đo tài nguyên,
 độ trễ. Chỉ import thư viện hoặc nạp một model chưa đủ.

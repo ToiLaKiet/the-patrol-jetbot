@@ -16,7 +16,7 @@ Test recorder ghi JPEG/CSV thật vào thư mục tạm bằng NumPy/OpenCV.
 | [test_teleop.py](test_teleop.py) | Mapping, vùng chết, slew rate, safety, motor và vòng đời teach |
 | [test_teach_recorder.py](test_teach_recorder.py) | Ảnh khớp CSV, lệnh dừng, lỗi camera/ghi đĩa, phiên riêng |
 | [test_jetbot_env.py](test_jetbot_env.py) | Checker môi trường, subprocess và workaround OpenBLAS |
-| [test_infer_sample.py](test_infer_sample.py) | RGB/normalize/thứ tự context, dữ liệu lỗi, đường dẫn class GNM cũ và CosPlace khớp kiến trúc gốc; hai test model cần source PlaceNav |
+| [test_infer_sample.py](test_infer_sample.py) | RGB/normalize/thứ tự context, dữ liệu lỗi, đường dẫn class GNM cũ, CosPlace khớp kiến trúc gốc; benchmark loại warm-up/validation khỏi thời gian, synchronize CUDA và giữ cả hai model; hai test model cần source PlaceNav |
 
 Các test không truy cập motor thật, không xác nhận được GStreamer, chiều quay,
 tốc độ cơ học, độ trễ joystick hoặc độ chính xác timestamp camera trên Nano.

@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 import pickle
 import platform
+import resource
+import statistics
 import sys
+import time
 import types
 
 if platform.machine() == "aarch64":
@@ -81,6 +84,63 @@ def check_tensor(name, tensor, shape):
         raise ValueError("{} có NaN hoặc Inf".format(name))
 
 
+def report_memory(device):
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    divisor = 1024 ** 2 if platform.system() == "Darwin" else 1024
+    print("Process peak RSS since start: {:.1f} MiB".format(peak / divisor), flush=True)
+    status = Path("/proc/self/status")
+    if status.is_file():
+        for line in status.read_text().splitlines():
+            if line.startswith(("VmRSS:", "VmHWM:")):
+                print("Process RAM " + line.strip(), flush=True)
+    if device.type == "cuda":
+        print("PyTorch CUDA allocated/reserved: {:.1f}/{:.1f} MiB; peak: {:.1f}/{:.1f} MiB".format(
+            torch.cuda.memory_allocated(device) / 1024 ** 2,
+            torch.cuda.memory_reserved(device) / 1024 ** 2,
+            torch.cuda.max_memory_allocated(device) / 1024 ** 2,
+            torch.cuda.max_memory_reserved(device) / 1024 ** 2,
+        ), flush=True)
+
+
+@torch.no_grad()
+def benchmark(loaded, context, goal, device, warmup, runs):
+    def forward():
+        return {name: model(context, goal) if name == "gnm" else (model(context[:, -3:]),)
+                for name, model in loaded.items()}
+
+    def validate(outputs):
+        for name, tensors in outputs.items():
+            if name == "gnm":
+                check_tensor("distance", tensors[0], (1, 1))
+                check_tensor("waypoints", tensors[1], (1, 5, 4))
+            else:
+                check_tensor("descriptor", tensors[0], (1, 512))
+
+    print("Benchmark {}: warmup={}, runs={}; models cùng nằm trong bộ nhớ.".format(
+        "+".join(loaded), warmup, runs), flush=True)
+    for _ in range(warmup):
+        validate(forward())
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
+    elapsed = []
+    for _ in range(runs):
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        start = time.perf_counter()
+        outputs = forward()
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        elapsed.append((time.perf_counter() - start) * 1000)
+        validate(outputs)
+        del outputs
+    print("Forward {}: mean={:.2f} ms, p50={:.2f} ms, min={:.2f} ms, max={:.2f} ms".format(
+        "+".join(loaded), statistics.mean(elapsed), statistics.median(elapsed),
+        min(elapsed), max(elapsed)), flush=True)
+    report_memory(device)
+    print("OK: mọi output đúng shape và hữu hạn; chưa đánh giá độ chính xác navigation.")
+
+
 def main(argv=None):
     root = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description=__doc__)
@@ -92,9 +152,15 @@ def main(argv=None):
     parser.add_argument("--placenav-dir", type=Path, default=root.parent / "PlaceNav")
     parser.add_argument("--device", choices=("cpu", "cuda"),
                         help="Mặc định dùng CUDA nếu khả dụng, nếu không dùng CPU.")
+    parser.add_argument("--benchmark", action="store_true",
+                        help="Giữ các model cùng trong bộ nhớ, đo RAM và thời gian forward.")
+    parser.add_argument("--warmup", type=int, default=10, help="Số lượt warm-up khi benchmark (>= 1).")
+    parser.add_argument("--runs", type=int, default=30, help="Số lượt đo sau warm-up (>= 1).")
     args = parser.parse_args(argv)
     if len(args.context) not in (1, 6):
         parser.error("--context cần đúng 1 hoặc 6 ảnh.")
+    if args.warmup < 1 or args.runs < 1:
+        parser.error("--warmup và --runs phải >= 1.")
     source = args.placenav_dir.resolve() / "src"
     if not (source / "placenav/models").is_dir():
         parser.error("Thiếu source PlaceNav: {} (dùng --placenav-dir).".format(source))
@@ -115,6 +181,14 @@ def main(argv=None):
         device, tuple(context.shape), tuple(goal.shape)), flush=True)
     if len(args.context) == 1:
         print("SMOKE TEST: lặp một ảnh 6 lần, không phải context chuyển động thực.", flush=True)
+    if args.benchmark:
+        loaded = {}
+        for name in selected:
+            print("Loading {}...".format(name), flush=True)
+            path = args.checkpoint_dir / checkpoints[name]
+            loaded[name] = (load_gnm(path) if name == "gnm" else load_cosplace(path)).to(device)
+        benchmark(loaded, context, goal, device, args.warmup, args.runs)
+        return 0
     with torch.no_grad():
         for name in selected:
             print("Loading {}...".format(name), flush=True)
