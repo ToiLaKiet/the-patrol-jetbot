@@ -2,3 +2,5 @@
 robot/.venv/
 robot/teach/
 __pycache__/
+PlaceNav
+*.pth

@@ -19,15 +19,43 @@ trên phần cứng trong lần rà source này.
 
 ## 1. Chạy hai model trên Nano
 
-- [ ] Ghi lại JetPack, Python, PyTorch, torchvision và CUDA thực tế.
-- [ ] Tải checkpoint `gnm_large.pth` và `efficientnet_85x85.pth` từ nguồn PlaceNav.
-- [ ] Tạo script inference độc lập dùng ảnh mẫu, chưa điều khiển motor.
+- [x] Ghi lại JetPack, Python, PyTorch, torchvision và CUDA thực tế.
+- [x] Tải checkpoint `gnm_large.pth` và `efficientnet_85x85.pth` từ nguồn PlaceNav.
+- [x] Tạo script inference độc lập dùng ảnh mẫu, chưa điều khiển motor: [infer_sample.py](robot/infer_sample.py), [cách chạy](robot/README.md#inference-độc-lập-với-ảnh-mẫu).
 - [ ] Kiểm tra tương thích torchvision: `ConvNormActivation`, `InvertedResidual`, `_make_divisible` và `Resize(..., antialias=True)`.
 - [ ] Điều chỉnh API không tương thích, giữ kiến trúc và preprocessing tương đương bản gốc.
 - [ ] Nạp GNM: loader gốc đọc đối tượng model qua `checkpoint["model"]`, có thể phụ thuộc class/module lúc lưu.
 - [ ] Nạp CosPlace với EfficientNet-B0, descriptor 512 chiều.
 - [ ] Chạy từng model rồi cả hai trong cùng tiến trình; kiểm tra shape, giá trị hữu hạn, RAM và thời gian inference sau warm-up.
 - [ ] Dựa vào số đo để quyết định có cần tối ưu hoặc chuyển TensorRT.
+
+Kết quả CLI do người dùng cung cấp trên `nano-4gb-jp45` (2026-11-24):
+L4T `32.5.0`, gói `nvidia-l4t-core` phiên bản `32.5.0-20210115145440`,
+kiến trúc `aarch64` theo `/etc/nv_tegra_release`. Nền tảng tương ứng JetPack
+`4.5` theo [đối chiếu NVIDIA](https://developer.nvidia.com/embedded/linux-tegra-r325);
+không có gói `nvidia-jetpack` trong kết quả truy vấn. CUDA toolkit `10.2.89`
+được xác nhận bằng `/usr/local/cuda/bin/nvcc --version` (release `10.2`).
+
+Môi trường robot được kiểm tra bằng
+`/home/jetbot/the-patrol-jetbot/robot/.venv/bin/python`, với
+`OPENBLAS_CORETYPE=ARMV8`:
+
+| Thành phần | Kết quả CLI |
+| --- | --- |
+| Python | `3.6.9` (GCC `8.4.0`) |
+| PyTorch | `1.10.0` |
+| torchvision | `0.11.1` |
+| CUDA dùng để build PyTorch | `10.2` |
+| `torch.cuda.is_available()` | `True` |
+
+Kết quả trên xác nhận import và phát hiện GPU; chưa kiểm tra inference GNM/CosPlace trên Nano.
+
+Script `robot/infer_sample.py` đã chạy trên máy phát triển bằng CPU
+(Python `3.10.16`, Torch `2.12.1`, torchvision `0.27.1`) với hai checkpoint
+Drive ở trên và ảnh `PlaceNav/doc/githeader_hor.png` lặp làm context.
+GNM trả distance `[1, 1]`, waypoint `[1, 5, 4]`; CosPlace trả descriptor
+`[1, 512]`, L2 norm `1.0`; các output hữu hạn. Cả 42 test tự động đều qua,
+gồm 6 test cho script. Chưa chạy script trên Nano hoặc benchmark sau warm-up.
 
 Điều kiện hoàn thành: cả hai model chạy được trên Nano và có số đo tài nguyên,
 độ trễ. Chỉ import thư viện hoặc nạp một model chưa đủ.

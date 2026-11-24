@@ -134,6 +134,55 @@ Phiên bản dependency được giữ trong [pyproject.toml](pyproject.toml) v�
 `uv.lock`. Upstream JetBot import cả camera, heartbeat và ObjectDetector,
 nên PyTorch/TensorRT vẫn cần cho cả chế độ chỉ điều khiển motor.
 
+## Inference độc lập với ảnh mẫu
+
+Script [infer_sample.py](infer_sample.py) chỉ đọc ảnh và checkpoint, không import
+JetBot, ROS hoặc mở camera/motor. Cần source PlaceNav tại `../PlaceNav` (tính từ
+`robot/`); nếu chưa có, clone từ thư mục gốc repo:
+
+```sh
+git clone https://github.com/lasuomela/PlaceNav.git PlaceNav
+```
+
+Không cài `PlaceNav/requirements.txt` vào môi trường Nano hiện tại. Script dùng
+các class model từ source đó, với Torch/torchvision đã kiểm tra trên Nano.
+Đặt hai checkpoint đã tải trong `robot/checkpoints/`:
+`gnm_large.pth` và `efficientnet_85x85.pth`. Chỉ nạp checkpoint từ nguồn tin cậy:
+GNM lưu cả đối tượng Python, nên `torch.load` sẽ giải pickle.
+
+Chạy từ `robot/`, thay đường dẫn ảnh bằng JPEG/PNG đã có (có thể dùng ảnh teach):
+
+```sh
+uv run --no-sync python infer_sample.py \
+  --context /duong/dan/anh_hien_tai.jpg \
+  --goal /duong/dan/anh_subgoal.jpg \
+  --device cuda
+```
+
+Mặc định chạy GNM rồi CosPlace lần lượt và giải phóng từng model. Dùng
+`--model gnm` hoặc `--model cosplace` để kiểm tra riêng; `--device cpu` để chạy
+CPU. Có thể đổi vị trí source/checkpoint bằng `--placenav-dir` và
+`--checkpoint-dir`.
+
+Một ảnh context được lặp 6 lần và được ghi rõ là smoke test. Để dùng context
+thật, truyền đúng 6 ảnh theo thứ tự 5 ảnh trước → ảnh hiện tại:
+
+```sh
+uv run --no-sync python infer_sample.py \
+  --context 0.jpg 1.jpg 2.jpg 3.jpg 4.jpg 5.jpg --goal subgoal.jpg
+```
+
+Preprocessing giữ thứ tự của PlaceNav: RGB → tensor → resize rộng 85 × cao 64
+với antialias → normalize ImageNet. CosPlace dùng ảnh hiện tại với cùng
+preprocessing như luồng navigation gốc. Script nạp weights strict, xử lý
+đường dẫn class GNM cũ `gnm_train.models.gnm.GNM`, và không tải thêm weights
+ImageNet khi dựng EfficientNet-B0.
+
+Khi thành công, GNM in distance `[1, 1]`, waypoint `[1, 5, 4]`; CosPlace in
+shape descriptor `[1, 512]` và L2 norm. Input/output sai shape hoặc có NaN/Inf
+làm script thất bại. Đây là kiểm tra inference, chưa đánh giá navigation,
+benchmark sau warm-up hoặc khả năng giữ cả hai model cùng lúc trong RAM Nano.
+
 ## Chạy
 
 Sau khi cài môi trường ở trên, chạy từ `robot/`. Những lần sau chỉ cần
