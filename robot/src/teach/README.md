@@ -1,8 +1,25 @@
-# Teach recorder
+# Teach
 
-[recorder.py](recorder.py) ghi ảnh và lệnh motor trong khi người dùng lái.
-Bật bằng `--teach-dir teach` từ [entry point](../main.py).
-Không phụ thuộc ROS hoặc PlaceNav.
+[main.py](main.py) chạy giai đoạn Teach, được gọi từ `main.py teach`.
+
+Luồng dự kiến: **Joystick → Collect ROSBag → create TOPOMAP**. Joystick chạy
+đồng thời với việc thu dữ liệu; tạo TOPOMAP sau khi kết thúc phiên.
+
+| Phần | File | Trạng thái |
+| --- | --- | --- |
+| Joystick | [teleop.py](../teleop/teleop.py) | Đã có, cùng safety và motor |
+| Thu dữ liệu hiện tại | [recorder.py](recorder.py) | Đã có JPEG + CSV, chưa phải ROSBag |
+| Collect ROSBag | [rosbag_recorder.py](rosbag_recorder.py) | File trống, chưa triển khai |
+| create TOPOMAP | [create_topomap.py](create_topomap.py) | File trống, chưa triển khai |
+
+Chạy từ `robot/`:
+
+```sh
+uv run --no-sync python src/main.py teach --teach-dir teach
+```
+
+Mặc định ghi vào `teach/`. Giai đoạn hiện tại dùng [recorder.py](recorder.py),
+không phụ thuộc ROS và chưa tự tạo TOPOMAP.
 
 ## Luồng ghi
 

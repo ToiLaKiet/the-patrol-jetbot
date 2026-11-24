@@ -4,6 +4,8 @@ Mục tiêu: giữ thư viện JetBot cho camera/motor, port phần tính toán 
 Yêu cầu PlaceNav/Repeat của dự án: cập nhật waypoint ở 5 Hz (200 ms/vòng).
 Checklist dành cho một người: làm lần lượt từ bước 1 đến bước 6.
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
+Entry point đã tách `teach` và `navigation`; ROSBag, tạo TOPOMAP và các bước
+Navigation hiện là file trống, chưa được tính là hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
 

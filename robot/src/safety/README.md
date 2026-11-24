@@ -8,6 +8,10 @@
 | `SafetyInput` | Thời điểm, lệnh gần nhất, estop, pin, định vị và camera |
 | `SafetyLayer` | Trả lý do chặn và giữ `state`/`reason` gần nhất |
 
+`SafetyConfig` kiểm tra ngay khi tạo: mọi giá trị phải hữu hạn, timeout > 0,
+giới hạn vận tốc >= 0 và ngưỡng pin trong [0, 1]. Cấu hình không cho sửa
+trực tiếp; tạo `SafetyConfig(...)` mới khi cần đổi giới hạn.
+
 `check(input, moving=True)` kiểm tra theo thứ tự:
 estop → nếu không chuyển động thì OK → thời gian hợp lệ → timeout →
 pin hợp lệ → pin cạn → định vị nếu cần → camera nếu cần → OK.

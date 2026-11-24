@@ -27,7 +27,9 @@ v_right = v + w * wheelbase / 2
 left, right = v_left / v_full, v_right / v_full
 ```
 
-`to_wheels()` áp dụng phép đổi và giới hạn duty. `wheelbase` và `v_full`
+`to_wheels()` áp dụng phép đổi và giới hạn duty. `drive()` dừng motor rồi
+báo lại lỗi nếu dữ liệu hoặc hiệu chỉnh không hợp lệ; lỗi ghi motor cũng
+được xử lý như vậy. `wheelbase` và `v_full`
 cần hiệu chỉnh theo robot thật; mô hình tốc độ–duty là xấp xỉ tuyến tính.
 Teleop hiện tại gọi `set_motors()` trực tiếp.
 

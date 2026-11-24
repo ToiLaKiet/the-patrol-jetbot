@@ -10,18 +10,16 @@ from safety.safety import SafetyInput
 class Teleop:
     L1_BUTTON = 4
 
-    def __init__(self, motors, safety, max_speed=0.25, deadzone=0.08, slew_rate=0.5,
+    def __init__(self, motors, safety, max_duty=0.1, deadzone=0.08, slew_rate=0.5,
                  recorder=None):
-        if not all(math.isfinite(x) for x in (max_speed, deadzone, slew_rate)):
+        if not all(math.isfinite(x) for x in (max_duty, deadzone, slew_rate)):
             raise ValueError("Teleop parameters must be finite")
-        if not (0 < max_speed <= 1 and 0 <= deadzone < 1 and slew_rate > 0):
+        if not (0 < max_duty <= 1 and 0 <= deadzone < 1 and slew_rate > 0):
             raise ValueError("Invalid teleop parameters")
-        if not math.isfinite(safety.cfg.cmd_timeout) or safety.cfg.cmd_timeout <= 0:
-            raise ValueError("Command timeout must be finite and positive")
         self.motors = motors
         self.recorder = recorder
         self.safety = safety
-        self.max_speed = min(max_speed, motors.max_duty)
+        self.max_duty = min(max_duty, motors.max_duty)
         self.deadzone = deadzone
         self.slew_rate = slew_rate
         self.safety_input = SafetyInput(
@@ -59,7 +57,7 @@ class Teleop:
         turn *= abs(turn)
         left, right = forward + turn, forward - turn
         scale = max(1.0, abs(left), abs(right))
-        left, right = self.max_speed * left / scale, self.max_speed * right / scale
+        left, right = self.max_duty * left / scale, self.max_duty * right / scale
         step = self.slew_rate * dt
         self._left += max(-step, min(step, left - self._left))
         self._right += max(-step, min(step, right - self._right))
@@ -88,7 +86,7 @@ class Teleop:
             if controller.get_numaxes() < 2 or controller.get_numbuttons() <= self.L1_BUTTON:
                 raise RuntimeError(f"Tay cầm không đủ axis 0/1 và button {self.L1_BUTTON}")
             instance_id = controller.get_instance_id()
-            print(f"Teleop: {controller.get_name()}, max_speed={self.max_speed:g}, "
+            print(f"Teleop: {controller.get_name()}, max_duty={self.max_duty:g}, "
                   f"deadzone={self.deadzone:g}, slew_rate={self.slew_rate:g}")
             print(f"Đưa cần về giữa, thả L1/button {self.L1_BUTTON} rồi giữ L1 để chạy. Ctrl+C để thoát.")
             print("Chưa giám sát pin. Thả L1 để dừng ngay.")

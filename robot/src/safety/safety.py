@@ -1,20 +1,29 @@
-"""Lớp an toàn: đứng NGAY TRƯỚC động cơ và có quyền ghi đè mọi lệnh.
+"""Kiểm tra an toàn do bên điều khiển gọi trước khi gửi lệnh motor.
 
 Quy tắc (theo thứ tự ưu tiên): dừng khẩn cấp · watchdog (không có lệnh mới) · pin cạn · mất định vị
 · mất camera khi skill cần camera · giới hạn tốc độ.
-Mỗi lần chặn đều có `reason` để hiện lên dashboard và ghi log.
+Mỗi lần chặn có `reason`; lớp này không tự gửi lệnh motor.
 """
 from dataclasses import dataclass
 import math
 from typing import Optional
 
 
-@dataclass
+@dataclass(frozen=True)
 class SafetyConfig:
     cmd_timeout: float = 1.0       # s — watchdog
     v_max: float = 0.30            # m/s
     w_max: float = 1.6             # rad/s
     battery_critical: float = 0.10
+
+    def __post_init__(self):
+        if not all(math.isfinite(x) for x in (
+            self.cmd_timeout, self.v_max, self.w_max, self.battery_critical,
+        )):
+            raise ValueError("Safety configuration must be finite")
+        if not (self.cmd_timeout > 0 and self.v_max >= 0 and self.w_max >= 0
+                and 0 <= self.battery_critical <= 1):
+            raise ValueError("Invalid safety configuration limits")
 
 
 @dataclass

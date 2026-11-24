@@ -132,13 +132,17 @@ class JetMotors:
         """
         Drive using desired linear and angular velocities.
         """
-        left, right = self.to_wheels(
-            v=v,
-            w=w,
-            wheelbase=wheelbase,
-            v_full=v_full,
-            max_duty=self.max_duty,
-        )
+        try:
+            left, right = self.to_wheels(
+                v=v,
+                w=w,
+                wheelbase=wheelbase,
+                v_full=v_full,
+                max_duty=self.max_duty,
+            )
+        except Exception:
+            self.stop()
+            raise
 
         self.set_motors(left, right)
 
