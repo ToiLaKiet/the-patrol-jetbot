@@ -29,7 +29,7 @@ class CreateTopomapTest(unittest.TestCase):
                 writer.writerow([filename, timestamp, timestamp, 0, 0])
 
     def test_samples_by_elapsed_time_and_preserves_jpeg_bytes(self):
-        self.record([0.1, 0.3, 4.9, 5.2, 5.4, 10.4, 10.6])
+        self.record([0.1, 0.3, 1.9, 2.2, 2.4, 4.4, 4.6])
         self.assertEqual(create_topomap(self.session, self.destination), 3)
         self.assertEqual(sorted(p.name for p in self.destination.iterdir()),
                          ["0.jpg", "1.jpg", "2.jpg"])
@@ -38,9 +38,9 @@ class CreateTopomapTest(unittest.TestCase):
                              (self.session / "images/{:06d}.jpg".format(source)).read_bytes())
 
     def test_short_session_and_custom_interval(self):
-        self.record([0, 0.2, 2.1])
+        self.record([0, 0.2, 1.1])
         self.assertEqual(create_topomap(self.session, self.destination), 1)
-        self.assertEqual(create_topomap(self.session, self.root / "dense", dt=2), 2)
+        self.assertEqual(create_topomap(self.session, self.root / "dense", dt=1), 2)
 
     def test_rejects_invalid_intervals(self):
         for dt in [0, -1, float("nan"), float("inf")]:

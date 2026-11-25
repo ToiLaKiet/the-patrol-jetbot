@@ -3,7 +3,7 @@
 [record_route.py](record_route.py) là entry point độc lập của giai đoạn Teach.
 
 Luồng hiện tại: **Joystick + ghi JPEG/CSV khoảng 5 Hz → kết thúc phiên →
-tạo TOPOMAP với khoảng lấy mẫu mặc định 5 giây**. Không cần ROS hoặc odometry.
+tạo TOPOMAP với khoảng lấy mẫu mặc định 2 giây**. Không cần ROS hoặc odometry.
 
 | Phần | File | Trạng thái |
 | --- | --- | --- |
@@ -31,12 +31,12 @@ uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route
 ```
 
 Script đọc `image` và `frame_read_s` trong `samples.csv`, chọn ảnh đầu rồi
-ảnh đầu tiên cách ảnh đã chọn ít nhất **5 giây**. Lấy mẫu bằng timestamp,
-không đếm mỗi 25 frame vì tốc độ ghi thực tế có thể thấp hơn 5 Hz.
+ảnh đầu tiên cách ảnh đã chọn ít nhất **2 giây**. Lấy mẫu bằng timestamp,
+không đếm mỗi 10 frame vì tốc độ ghi thực tế có thể thấp hơn 5 Hz.
 Đổi khoảng lấy mẫu bằng `--dt 3` nếu cần điều chỉnh theo tốc độ robot.
 Đây là khoảng thời gian trong phiên Teach, không phụ thuộc tốc độ phát lại.
 Script không tự bỏ ảnh đứng yên hoặc thêm ảnh cuối nếu chưa đủ khoảng lấy mẫu;
-phiên ngắn hơn 5 giây chỉ có một node.
+phiên ngắn hơn 2 giây chỉ có một node.
 
 ```text
 topomaps/route_a/

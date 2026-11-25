@@ -9,7 +9,7 @@ import shutil
 from PIL import Image
 
 
-def create_topomap(session, destination, dt=5.0):
+def create_topomap(session, destination, dt=2.0):
     if not math.isfinite(dt) or dt <= 0:
         raise ValueError("dt phải hữu hạn và lớn hơn 0.")
 
@@ -55,8 +55,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Tạo topomap ảnh từ phiên Teach JPEG/CSV đã đóng.")
     parser.add_argument("session", type=Path, help="Thư mục run_... chứa samples.csv và images/.")
     parser.add_argument("destination", type=Path, help="Thư mục map mới; không ghi đè map đã có.")
-    parser.add_argument("--dt", type=float, default=5.0,
-                        help="Khoảng thời gian tối thiểu giữa hai ảnh node, giây (mặc định: 5).")
+    parser.add_argument("--dt", type=float, default=2.0,
+                        help="Khoảng thời gian tối thiểu giữa hai ảnh node, giây (mặc định: 2).")
     args = parser.parse_args(argv)
     try:
         count = create_topomap(args.session, args.destination, args.dt)
