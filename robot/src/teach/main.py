@@ -35,7 +35,7 @@ def main(argv=None):
 
 
 def run(args):
-    print("Teach: joystick + JPEG/CSV. ROSBag và tạo TOPOMAP chưa triển khai.", flush=True)
+    print("Teach: joystick + JPEG/CSV khoảng 5 Hz. Kết thúc phiên rồi chạy create_topomap.py.", flush=True)
     from hardware.patroljet import PatrolJet
 
     robot = PatrolJet("Patrol-01")

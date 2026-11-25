@@ -15,14 +15,15 @@ flowchart TD
     Teach --> Joystick["Joystick → Safety → Motor · khoảng 50 Hz"]
     Teach --> Recorder["Camera + lệnh motor → Recorder · khoảng 5 Hz"]
     Recorder --> Data["teach/run_.../ · JPEG + samples.csv"]
+    Data --> Topomap["create_topomap.py → ảnh node cách nhau ít nhất 5 giây"]
     Navigation --> Pending["Báo chưa triển khai và thoát trước khi khởi tạo camera/motor"]
 ```
 
 ## Luồng đích theo PlaceNav
 
-- **Teach:** lái bằng joystick, đồng thời Collect ROSBag → kết thúc phiên →
-  create TOPOMAP. ROSBag và tạo TOPOMAP hiện là file trống; dữ liệu đang thu
-  là JPEG + CSV.
+- **Teach:** lái bằng joystick và ghi JPEG + CSV khoảng 5 Hz → kết thúc phiên →
+  chạy `create_topomap.py` để xuất ảnh node theo timestamp, mặc định cách nhau
+  ít nhất 5 giây. ROSBag chưa triển khai; luồng tạo map hiện không cần ROS/odometry.
 - **Navigation:** ảnh camera + TOPOMAP → inference/định vị → chọn subgoal →
   GNM predict waypoints → PD controller đổi sang `(v, omega)` → safety →
   `JetMotors.drive()`. Chưa nối thành luồng tự hành; yêu cầu cập nhật waypoint
@@ -171,12 +172,17 @@ cd ~/the-patrol-jetbot/robot
 # Joystick + ghi JPEG/CSV; mặc định lưu vào teach/
 uv run --no-sync python src/teach/main.py
 
+# Sau khi kết thúc Teach: thay run_... bằng thư mục phiên đã in ra
+uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route_a
+
 # Khung Navigation: hiện báo chưa triển khai, không điều khiển motor
 uv run --no-sync python src/navigation/main.py
 ```
 
 Teach mặc định mở camera và ghi dữ liệu. Đưa cần về giữa, thả L1 rồi giữ L1
 để lái; thả L1 để dừng, `Ctrl+C` để kết thúc và đóng tài nguyên.
+Tạo topomap là bước riêng sau khi đóng phiên; thư mục map đích phải chưa tồn tại.
+Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/teach/README.md).
 
 ## Mã nguồn và tiến độ
 

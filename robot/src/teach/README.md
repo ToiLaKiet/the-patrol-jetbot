@@ -2,15 +2,15 @@
 
 [main.py](main.py) là entry point độc lập của giai đoạn Teach.
 
-Luồng dự kiến: **Joystick → Collect ROSBag → create TOPOMAP**. Joystick chạy
-đồng thời với việc thu dữ liệu; tạo TOPOMAP sau khi kết thúc phiên.
+Luồng hiện tại: **Joystick + ghi JPEG/CSV khoảng 5 Hz → kết thúc phiên →
+tạo TOPOMAP với khoảng lấy mẫu mặc định 5 giây**. Không cần ROS hoặc odometry.
 
 | Phần | File | Trạng thái |
 | --- | --- | --- |
 | Joystick | [teleop.py](../teleop/teleop.py) | Đã có, cùng safety và motor |
 | Thu dữ liệu hiện tại | [recorder.py](recorder.py) | Đã có JPEG + CSV, chưa phải ROSBag |
 | Collect ROSBag | [rosbag_recorder.py](rosbag_recorder.py) | File trống, chưa triển khai |
-| create TOPOMAP | [create_topomap.py](create_topomap.py) | File trống, chưa triển khai |
+| create TOPOMAP | [create_topomap.py](create_topomap.py) | Đọc JPEG/CSV, xuất ảnh node theo timestamp |
 
 Chạy từ `robot/`:
 
@@ -19,7 +19,38 @@ uv run --no-sync python src/teach/main.py --teach-dir teach
 ```
 
 Mặc định ghi vào `teach/`. Giai đoạn hiện tại dùng [recorder.py](recorder.py),
-không phụ thuộc ROS và chưa tự tạo TOPOMAP.
+không phụ thuộc ROS. Sau khi kết thúc Teach, chạy bước tạo TOPOMAP riêng.
+
+## Tạo topomap
+
+Sau `Ctrl+C`, dùng đúng đường dẫn `Teach recording: ...` đã in khi bắt đầu phiên.
+Ví dụ chạy từ `robot/` (thay `run_...` bằng thư mục phiên thực tế):
+
+```sh
+uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route_a
+```
+
+Script đọc `image` và `frame_read_s` trong `samples.csv`, chọn ảnh đầu rồi
+ảnh đầu tiên cách ảnh đã chọn ít nhất **5 giây**. Lấy mẫu bằng timestamp,
+không đếm mỗi 25 frame vì tốc độ ghi thực tế có thể thấp hơn 5 Hz.
+Đổi khoảng lấy mẫu bằng `--dt 3` nếu cần điều chỉnh theo tốc độ robot.
+Đây là khoảng thời gian trong phiên Teach, không phụ thuộc tốc độ phát lại.
+Script không tự bỏ ảnh đứng yên hoặc thêm ảnh cuối nếu chưa đủ khoảng lấy mẫu;
+phiên ngắn hơn 5 giây chỉ có một node.
+
+```text
+topomaps/route_a/
+  0.jpg
+  1.jpg
+  2.jpg
+  ...
+```
+
+Ảnh được kiểm tra đọc được rồi sao chép nguyên JPEG, không resize hoặc đổi màu.
+Map mới có tên ảnh số liên tiếp phù hợp loader của PlaceNav; navigation JetBot
+vẫn chưa triển khai. Không xuất pose giả hoặc `traj_data.pkl`.
+Script từ chối thư mục đích đã tồn tại, CSV rỗng hoặc timestamp không hợp lệ;
+nếu lỗi ảnh/ghi đĩa thì xóa map đang tạo dở. Dữ liệu Teach gốc được giữ nguyên.
 
 ## Luồng ghi
 
