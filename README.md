@@ -15,15 +15,16 @@ flowchart TD
     Teach --> Joystick["Joystick → Safety → Motor · khoảng 50 Hz"]
     Teach --> Recorder["Camera + lệnh motor → Recorder · khoảng 5 Hz"]
     Recorder --> Data["teach/run_.../ · JPEG + samples.csv"]
-    Data --> Topomap["create_topomap.py → ảnh node cách nhau ít nhất 2 giây"]
+    Data --> Topomap["create_topomap.py → lấy mẫu 2 giây, giữ ảnh đầu/cuối"]
     Navigation --> Pending["Báo chưa triển khai và thoát trước khi khởi tạo camera/motor"]
 ```
 
 ## Luồng đích theo PlaceNav
 
 - **Teach:** lái bằng joystick và ghi JPEG + CSV khoảng 5 Hz → kết thúc phiên →
-  chạy `create_topomap.py` để xuất ảnh node theo timestamp, mặc định cách nhau
-  ít nhất 2 giây. ROSBag chưa triển khai; luồng tạo map hiện không cần ROS/odometry.
+  chạy `create_topomap.py` để xuất ảnh node theo timestamp, mặc định lấy mẫu
+  cách nhau ít nhất 2 giây và luôn giữ ảnh đầu/cuối; đoạn cuối có thể ngắn hơn.
+  ROSBag chưa triển khai; luồng tạo map hiện không cần ROS/odometry.
 - **Navigation:** ảnh camera + TOPOMAP → inference/định vị → chọn subgoal →
   GNM predict waypoints → PD controller đổi sang `(v, omega)` → safety →
   `JetMotors.drive()`. Chưa nối thành luồng tự hành; yêu cầu cập nhật waypoint

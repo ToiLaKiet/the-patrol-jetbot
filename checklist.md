@@ -5,7 +5,7 @@ Yêu cầu PlaceNav/Repeat của dự án: cập nhật waypoint ở 5 Hz (200 m
 Checklist dành cho một người: làm lần lượt từ bước 1 đến bước 6.
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
 Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/navigation/main.py`;
-Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây.
+Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây và giữ ảnh đầu/cuối.
 ROSBag và các bước Navigation hiện là file trống, chưa hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
@@ -43,7 +43,7 @@ Chưa xác nhận toàn pipeline camera/preprocessing/localization đạt 5 Hz h
 ## 3. Tạo topomap từ phiên teach
 
 - [ ] Thu tuyến ngắn khoảng 2–3 m, có ảnh đầu/cuối và timestamp.
-- [x] [create_topomap.py](robot/src/teach/create_topomap.py) chọn ảnh theo `frame_read_s`, mặc định cách nhau ít nhất 2 giây (`--dt` để đổi); Teach vẫn ghi khoảng 5 Hz.
+- [x] [create_topomap.py](robot/src/teach/create_topomap.py) chọn ảnh theo `frame_read_s`, mặc định cách nhau ít nhất 2 giây (`--dt` để đổi), luôn giữ ảnh đầu/cuối và không thêm trùng ảnh cuối đã chọn; đoạn cuối có thể dưới 2 giây. Teach vẫn ghi khoảng 5 Hz.
 - [x] Xuất thư mục ảnh node `0.jpg`, `1.jpg`, …; kiểm tra ảnh JPEG đọc được, timestamp tăng dần và không ghi đè map cũ. Đã kiểm tra bằng dữ liệu mẫu, chưa thử tuyến thật.
 - [ ] Chỉnh khoảng lấy mẫu theo tốc độ JetBot và kiểm tra node trùng lúc đứng yên; hiện script chỉ lấy mẫu theo thời gian.
 - [ ] Sau khi có ảnh topomap và CosPlace chạy được: trích xuất descriptor cho từng node và lưu/cache database HDF5.

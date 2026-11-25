@@ -31,12 +31,14 @@ uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route
 ```
 
 Script đọc `image` và `frame_read_s` trong `samples.csv`, chọn ảnh đầu rồi
-ảnh đầu tiên cách ảnh đã chọn ít nhất **2 giây**. Lấy mẫu bằng timestamp,
+ảnh đầu tiên cách ảnh đã chọn ít nhất **2 giây**, sau đó thêm ảnh cuối phiên
+nếu chưa được chọn. Khoảng cách tới node cuối có thể dưới 2 giây để giữ đúng
+điểm kết thúc Teach. Lấy mẫu bằng timestamp,
 không đếm mỗi 10 frame vì tốc độ ghi thực tế có thể thấp hơn 5 Hz.
 Đổi khoảng lấy mẫu bằng `--dt 3` nếu cần điều chỉnh theo tốc độ robot.
 Đây là khoảng thời gian trong phiên Teach, không phụ thuộc tốc độ phát lại.
-Script không tự bỏ ảnh đứng yên hoặc thêm ảnh cuối nếu chưa đủ khoảng lấy mẫu;
-phiên ngắn hơn 2 giây chỉ có một node.
+Script không tự bỏ ảnh đứng yên. Phiên ngắn hơn 2 giây vẫn giữ ảnh đầu và cuối;
+nếu phiên chỉ có một ảnh thì chỉ xuất một node, không nhân đôi.
 
 ```text
 topomaps/route_a/

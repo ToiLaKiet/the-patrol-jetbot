@@ -18,6 +18,7 @@ def create_topomap(session, destination, dt=2.0):
     selected = []
     previous_time = None
     selected_time = None
+    last_image = None
     with (session / "samples.csv").open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         if not {"image", "frame_read_s"}.issubset(reader.fieldnames or []):
@@ -28,14 +29,16 @@ def create_topomap(session, destination, dt=2.0):
                     or (previous_time is not None and timestamp <= previous_time)):
                 raise ValueError("frame_read_s phải hữu hạn, không âm và tăng dần.")
             previous_time = timestamp
+            last_image = (session / row["image"]).resolve()
+            last_image.relative_to(session)
             if selected_time is None or timestamp - selected_time >= dt:
-                image = (session / row["image"]).resolve()
-                image.relative_to(session)
-                selected.append(image)
+                selected.append(last_image)
                 selected_time = timestamp
 
     if not selected:
         raise ValueError("Phiên Teach không có mẫu ảnh.")
+    if selected[-1] != last_image:
+        selected.append(last_image)
 
     destination.mkdir(parents=True, exist_ok=False)
     try:
@@ -56,7 +59,7 @@ def main(argv=None):
     parser.add_argument("session", type=Path, help="Thư mục run_... chứa samples.csv và images/.")
     parser.add_argument("destination", type=Path, help="Thư mục map mới; không ghi đè map đã có.")
     parser.add_argument("--dt", type=float, default=2.0,
-                        help="Khoảng thời gian tối thiểu giữa hai ảnh node, giây (mặc định: 2).")
+                        help="Khoảng lấy mẫu tối thiểu, giây (mặc định: 2); luôn giữ ảnh đầu và cuối.")
     args = parser.parse_args(argv)
     try:
         count = create_topomap(args.session, args.destination, args.dt)
