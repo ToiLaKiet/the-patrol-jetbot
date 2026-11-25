@@ -6,7 +6,8 @@ Checklist dành cho một người: làm lần lượt từ bước 1 đến bư
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
 Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/navigation/main.py`;
 Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây và giữ ảnh đầu/cuối.
-ROSBag và các bước Navigation hiện là file trống, chưa hoàn thành luồng tự hành.
+Đã có CosPlace + Bayesian và CLI thử định vị trên ảnh, không cần ROS/odometry.
+ROSBag, subgoal, waypoint và PD controller chưa triển khai; chưa hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
 
@@ -38,7 +39,7 @@ Chưa xác nhận toàn pipeline camera/preprocessing/localization đạt 5 Hz h
 - [x] Frame JetCamera là **BGR**, shape `(224, 224, 3)`, dtype `uint8`; đã đối chiếu `assume_bgr.png` đúng màu vật thật.
 - [x] [Preprocessing dùng chung](robot/src/utils.py): BGR → RGB → tensor → resize rộng 85 × cao 64 (antialias) → normalize mean `[0.485, 0.456, 0.406]`, std `[0.229, 0.224, 0.225]`; output `float32 [3, 64, 85]`, dùng trong script inference.
 - [ ] Kiểm soát nhịp lấy context và timestamp; không coi frame lặp/quá hạn là ảnh mới. Code gốc thêm ảnh theo callback camera.
-- [ ] Dùng cùng preprocessing cho ảnh topomap và ảnh Repeat.
+- [x] Dùng cùng `preprocess_frame` cho ảnh topomap và query qua FeatureExtractor; chưa nối camera Repeat trực tiếp.
 
 ## 3. Tạo topomap từ phiên teach
 
@@ -46,8 +47,8 @@ Chưa xác nhận toàn pipeline camera/preprocessing/localization đạt 5 Hz h
 - [x] [create_topomap.py](robot/src/teach/create_topomap.py) chọn ảnh theo `frame_read_s`, mặc định cách nhau ít nhất 2 giây (`--dt` để đổi), luôn giữ ảnh đầu/cuối và không thêm trùng ảnh cuối đã chọn; đoạn cuối có thể dưới 2 giây. Teach vẫn ghi khoảng 5 Hz.
 - [x] Xuất thư mục ảnh node `0.jpg`, `1.jpg`, …; kiểm tra ảnh JPEG đọc được, timestamp tăng dần và không ghi đè map cũ. Đã kiểm tra bằng dữ liệu mẫu, chưa thử tuyến thật.
 - [ ] Chỉnh khoảng lấy mẫu theo tốc độ JetBot và kiểm tra node trùng lúc đứng yên; hiện script chỉ lấy mẫu theo thời gian.
-- [ ] Sau khi có ảnh topomap và CosPlace chạy được: trích xuất descriptor cho từng node và lưu/cache database HDF5.
-- [ ] Kiểm tra descriptor khớp thứ tự node; tính lại cache khi đổi ảnh, model hoặc preprocessing.
+- [x] Trích xuất descriptor CosPlace cho từng node, giữ database trong RAM; chưa thêm cache HDF5.
+- [x] Descriptor theo thứ tự tên ảnh số liên tiếp từ 0; tính lại khi khởi chạy nên chưa có cache cũ cần vô hiệu hóa.
 
 `navigate.py` đọc ảnh topomap và descriptor, không đọc CSV lệnh motor hay
 `traj_data.pkl`. Script tạo map gốc phụ thuộc odometry, nhưng có thể thay bằng
@@ -56,9 +57,9 @@ trên ảnh này; không tạo pose giả.
 
 ## 4. Port localization và dự đoán waypoint
 
-- [ ] Tách tính toán khỏi ROS: thay subscriber/publisher bằng lời gọi Python; tách các import ROS trong `utils.py` và phụ thuộc liên quan.
-- [ ] Port CosPlace FeatureExtractor và một bộ lọc: Bayesian Filter
-- [ ] Thực hiện ảnh hiện tại → descriptor → node gần nhất.
+- [x] Place recognition gọi Python trực tiếp, dùng utils của JetBot; không kéo ROS từ `placenav.utils`.
+- [x] Port CosPlace FeatureExtractor và Bayesian Filter; xử lý map một node, descriptor trùng và NaN/Inf.
+- [x] Thực hiện ảnh query → descriptor → node gần nhất và posterior; CLI nhận một ảnh/thư mục ảnh, chưa mở camera hoặc motor.
 - [ ] Chọn subgoal phía trước và chặn ở goal; mặc định gốc `lookahead=1`.
 - [ ] Gọi GNM với context và ảnh subgoal để lấy chuỗi waypoint.
 - [ ] Chọn waypoint điều khiển; mặc định gốc `target_waypoint_idx=2`.

@@ -16,7 +16,7 @@ flowchart TD
     Teach --> Recorder["Camera + lệnh motor → Recorder · khoảng 5 Hz"]
     Recorder --> Data["teach/run_.../ · JPEG + samples.csv"]
     Data --> Topomap["create_topomap.py → lấy mẫu 2 giây, giữ ảnh đầu/cuối"]
-    Navigation --> Pending["Báo chưa triển khai và thoát trước khi khởi tạo camera/motor"]
+    Navigation --> Localization["Ảnh query + topomap → CosPlace + Bayesian → node và posterior"]
 ```
 
 ## Luồng đích theo PlaceNav
@@ -27,8 +27,9 @@ flowchart TD
   ROSBag chưa triển khai; luồng tạo map hiện không cần ROS/odometry.
 - **Navigation:** ảnh camera + TOPOMAP → inference/định vị → chọn subgoal →
   GNM predict waypoints → PD controller đổi sang `(v, omega)` → safety →
-  `JetMotors.drive()`. Chưa nối thành luồng tự hành; yêu cầu cập nhật waypoint
-  **5 Hz (200 ms/vòng)**.
+  `JetMotors.drive()`. Đã có CosPlace + Bayesian để thử định vị trên ảnh;
+  chưa nối camera/motor thành luồng tự hành. Yêu cầu cập nhật waypoint
+  của luồng tự hành là **5 Hz (200 ms/vòng)**.
 
 ## Khởi tạo môi trường uv trên JetBot
 
@@ -176,8 +177,9 @@ uv run --no-sync python src/teach/record_route.py
 # Sau khi kết thúc Teach: thay run_... bằng thư mục phiên đã in ra
 uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route_a
 
-# Khung Navigation: hiện báo chưa triển khai, không điều khiển motor
-uv run --no-sync python src/navigation/main.py
+# Thử định vị trên ảnh, chưa điều khiển motor; thay run_... bằng phiên thực tế
+uv run --no-sync python src/navigation/main.py \
+  --topomap-dir topomaps/route_a --query teach/run_.../images
 ```
 
 Teach mặc định mở camera và ghi dữ liệu. Đưa cần về giữa, thả L1 rồi giữ L1
@@ -188,5 +190,5 @@ Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/tea
 ## Mã nguồn và tiến độ
 
 - [Teach](robot/src/teach/record_route.py): joystick và thu dữ liệu hiện tại.
-- [Navigation](robot/src/navigation/main.py): điểm vào của luồng tự hành chưa triển khai.
+- [Navigation](robot/src/navigation/README.md): CosPlace + Bayesian trên ảnh; luồng tự hành chưa hoàn chỉnh.
 - [Checklist](checklist.md): kết quả đã có và các bước triển khai tiếp theo.
