@@ -10,7 +10,7 @@ trước và dự đoán waypoint để điều khiển hai bánh.
 
 ```mermaid
 flowchart TD
-    Teach["src/teach/main.py"]
+    Teach["src/teach/record_route.py"]
     Navigation["src/navigation/main.py"]
     Teach --> Joystick["Joystick → Safety → Motor · khoảng 50 Hz"]
     Teach --> Recorder["Camera + lệnh motor → Recorder · khoảng 5 Hz"]
@@ -170,7 +170,7 @@ chuẩn bị, không cần activate hoặc đồng bộ lại trước mỗi l�
 cd ~/the-patrol-jetbot/robot
 
 # Joystick + ghi JPEG/CSV; mặc định lưu vào teach/
-uv run --no-sync python src/teach/main.py
+uv run --no-sync python src/teach/record_route.py
 
 # Sau khi kết thúc Teach: thay run_... bằng thư mục phiên đã in ra
 uv run --no-sync python src/teach/create_topomap.py teach/run_... topomaps/route_a
@@ -186,6 +186,6 @@ Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/tea
 
 ## Mã nguồn và tiến độ
 
-- [Teach](robot/src/teach/main.py): joystick và thu dữ liệu hiện tại.
+- [Teach](robot/src/teach/record_route.py): joystick và thu dữ liệu hiện tại.
 - [Navigation](robot/src/navigation/main.py): điểm vào của luồng tự hành chưa triển khai.
 - [Checklist](checklist.md): kết quả đã có và các bước triển khai tiếp theo.

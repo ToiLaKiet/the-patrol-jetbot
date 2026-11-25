@@ -4,7 +4,7 @@ Mục tiêu: giữ thư viện JetBot cho camera/motor, port phần tính toán 
 Yêu cầu PlaceNav/Repeat của dự án: cập nhật waypoint ở 5 Hz (200 ms/vòng).
 Checklist dành cho một người: làm lần lượt từ bước 1 đến bước 6.
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
-Hai entry point chạy độc lập: `src/teach/main.py` và `src/navigation/main.py`;
+Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/navigation/main.py`;
 Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 5 giây.
 ROSBag và các bước Navigation hiện là file trống, chưa hoàn thành luồng tự hành.
 

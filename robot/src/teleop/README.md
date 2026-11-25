@@ -2,7 +2,7 @@
 
 [teleop.py](teleop.py) đọc tay cầm USB bằng Pygame trên thread chính,
 tạo lệnh hai bánh ở khoảng 50 Hz. Dùng motor và safety do `PatrolJet`
-truyền vào; recorder là tùy chọn ở API. CLI `src/teach/main.py` bật recorder
+truyền vào; recorder là tùy chọn ở API. CLI `src/teach/record_route.py` bật recorder
 mặc định; lệnh chạy nằm ở [README gốc](../../../README.md).
 
 ## Xử lý lệnh
