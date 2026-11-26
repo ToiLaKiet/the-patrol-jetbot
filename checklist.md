@@ -6,9 +6,9 @@ Checklist dành cho một người: làm lần lượt từ bước 1 đến bư
 Đã chạy inference mẫu và benchmark sau warm-up hai checkpoint trên CUDA của Nano.
 Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/navigation/main.py`;
 Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây và giữ ảnh đầu/cuối.
-Đã có CosPlace + Bayesian và CLI thử định vị trên ảnh, không cần ROS/odometry.
-Đã có hàm/CLI đổi waypoint normalized → `(v, w)`, chưa nối với predict hoặc motor.
-ROSBag, subgoal và luồng predict waypoint chưa triển khai; chưa hoàn thành luồng tự hành.
+Đã có CosPlace + Bayesian, GNM loader và lõi `navigate()` tính `(v, w)` trên ảnh,
+không cần ROS/odometry. CLI `--navigate` đã nối node → subgoal → predict → controller.
+Camera Repeat, safety/motor và ROSBag chưa nối; chưa hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
 
@@ -61,9 +61,9 @@ trên ảnh này; không tạo pose giả.
 - [x] Place recognition gọi Python trực tiếp, dùng utils của JetBot; không kéo ROS từ `placenav.utils`.
 - [x] Port CosPlace FeatureExtractor và Bayesian Filter; xử lý map một node, descriptor trùng và NaN/Inf.
 - [x] Thực hiện ảnh query → descriptor → node gần nhất và posterior; CLI nhận một ảnh/thư mục ảnh, chưa mở camera hoặc motor.
-- [ ] Chọn subgoal phía trước và chặn ở goal; mặc định gốc `lookahead=1`.
-- [ ] Gọi GNM với context và ảnh subgoal để lấy chuỗi waypoint.
-- [ ] Chọn waypoint điều khiển; mặc định gốc `target_waypoint_idx=2`.
+- [x] [Lõi Bayesian navigate](robot/src/navigation/navigate.py) chọn subgoal phía trước và chặn ở goal; mặc định `lookahead=1`.
+- [x] [GNM loader](robot/src/navigation/gnm.py) nạp checkpoint gốc, gọi GNM với context 6 ảnh và ảnh subgoal; CLI `--navigate` tính `(v, w)` trên chuỗi ảnh, chưa nối camera/motor.
+- [x] Chọn waypoint điều khiển; mặc định `target_waypoint_idx=2`, controller scale đúng một lần.
 - [ ] Replay dữ liệu độc lập, hiển thị query/node/subgoal/waypoint và độ trễ trước khi bật motor.
 - [ ] Đánh giá node dự đoán khi lái lại tuyến thủ công; xử lý map rỗng, dữ liệu lỗi và kết quả không hữu hạn.
 

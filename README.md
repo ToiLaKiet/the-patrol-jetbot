@@ -27,8 +27,9 @@ flowchart TD
   ROSBag chưa triển khai; luồng tạo map hiện không cần ROS/odometry.
 - **Navigation:** ảnh camera + TOPOMAP → inference/định vị → chọn subgoal →
   GNM predict waypoints → PD controller đổi sang `(v, omega)` → safety →
-  `JetMotors.drive()`. Đã có CosPlace + Bayesian để thử định vị trên ảnh;
-  chưa nối camera/motor thành luồng tự hành. Yêu cầu cập nhật waypoint
+  `JetMotors.drive()`. Đã nối CosPlace + Bayesian → subgoal → GNM → `(v, w)`
+  trên chuỗi ảnh qua CLI `--navigate`; chưa nối camera/motor thành luồng tự hành.
+  Yêu cầu cập nhật waypoint
   của luồng tự hành là **5 Hz (200 ms/vòng)**.
 
 ## Khởi tạo môi trường uv trên JetBot
@@ -190,5 +191,5 @@ Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/tea
 ## Mã nguồn và tiến độ
 
 - [Teach](robot/src/teach/record_route.py): joystick và thu dữ liệu hiện tại.
-- [Navigation](robot/src/navigation/README.md): CosPlace + Bayesian trên ảnh; luồng tự hành chưa hoàn chỉnh.
+- [Navigation](robot/src/navigation/README.md): CosPlace + Bayesian trên ảnh, tùy chọn GNM → `(v, w)`; luồng tự hành chưa hoàn chỉnh.
 - [Checklist](checklist.md): kết quả đã có và các bước triển khai tiếp theo.

@@ -1,16 +1,16 @@
 # Navigation
 
-[main.py](main.py) hiện chạy **định vị trên ảnh bằng CosPlace + Bayesian filter**.
-Luồng tự hành tiếp theo là **chọn subgoal → GNM predict waypoints → PD controller
-đổi sang `(v, omega)` → safety → `drive()`**, chưa được nối.
+[main.py](main.py) chạy **định vị bằng CosPlace + Bayesian filter**. Thêm
+`--navigate` để nối **chọn subgoal → GNM predict waypoints → controller → `(v, w)`**
+trên chuỗi ảnh. Camera trực tiếp, safety và motor chưa được nối vào luồng này.
 
 | Phần | File | Trạng thái |
 | --- | --- | --- |
 | Inference/định vị | [inference.py](inference.py) | Đọc map, trích descriptor và tìm node từ frame BGR |
 | Place recognition | [place_recognition/](place_recognition/) | CosPlace/EfficientNet-B0 và Bayesian filter, không phụ thuộc ROS/odometry |
-| Chọn subgoal | — | Chưa triển khai |
-| Predict waypoints | — | Chưa nối GNM vào Navigation |
-| PD controller → `(v, omega)` | [pd_controller.py](pd_controller.py) | Đã có hàm Python và CLI thử waypoint normalized; chưa nối với predict/motor |
+| Lõi điều hướng Bayesian | [navigate.py](navigate.py) | Context 6 ảnh → node → subgoal → GNM → `(v, w)` |
+| Predict waypoints | [gnm.py](gnm.py) | Nạp GNM Large và chạy inference; không cần checkout PlaceNav hoặc gnm_train |
+| PD controller → `(v, omega)` | [pd_controller.py](pd_controller.py) | Đã nối với predict; chưa nối motor |
 | Safety | [safety.py](../safety/safety.py) | Đã có, chưa nối với Navigation |
 | `(v, omega)` → hai bánh | [motors.py](../hardware/motors.py) | Đã có `JetMotors.drive()`, chưa nối với Navigation |
 
@@ -63,6 +63,70 @@ theo thứ tự thời gian để giữ trạng thái Bayesian. Các mặc đị
 không sinh NaN; trường hợp không phân biệt được có thể trả phân bố đều.
 
 Lệnh này chưa khởi tạo camera hoặc motor. Chưa có chế độ tự hành hoạt động.
+
+## Bayesian + GNM → `(v, w)`
+
+Chạy từ `robot/`, với ít nhất 6 ảnh Teach theo thứ tự cũ → mới:
+
+```sh
+uv run --no-sync python src/navigation/main.py \
+  --navigate --topomap-dir topomaps/route_a --query teach/run_.../images \
+  --gnm-checkpoint checkpoints/gnm_large.pth --max-v 0.10 --max-w 0.60
+```
+
+Giới hạn trên chỉ minh họa, chưa hiệu chỉnh cho JetBot. `--checkpoint` vẫn là
+checkpoint CosPlace; `--gnm-checkpoint` là checkpoint GNM Large tải từ README
+PlaceNav. Loader GNM đọc model/optimizer pickled trên CPU rồi nạp trọng số vào
+kiến trúc GNM cục bộ và chuyển sang device. Chỉ dùng checkpoint từ nguồn tin cậy.
+Không cần cài `gnm_train`, ROS hoặc tải thêm trọng số ImageNet.
+
+Sau 6 ảnh đầu, mỗi ảnh mới cho một kết quả:
+
+```text
+t=1.000 node=0 posterior=0.9234 subgoal=1 v=0.090030 w=0.217337 goal=False time_ms=... waypoint=[...]
+```
+
+Các giá trị trên minh họa định dạng. Lõi dùng lại Bayesian đã có, khởi tạo belief
+từ query đầu tiên sau khi đủ context, không dùng sliding window hoặc start node.
+`--lookahead` mặc định 1, `--target-waypoint-idx` mặc định 2 (waypoint thứ ba),
+`--goal-node-idx` mặc định -1 (node cuối), `--frame-rate` mặc định 5 Hz.
+Ảnh topomap được tiền xử lý và giữ trên CPU; chỉ ảnh subgoal được chuyển tới device
+ở mỗi lần predict. Waypoint normalized đi thẳng vào controller, scale một lần bên trong.
+
+CLI đọc ảnh nhanh nhất có thể, dùng timestamp giả định `index / frame_rate`;
+không phát lại theo thời gian thực và không đọc `samples.csv`. Để đánh giá timing
+hoặc nối camera, cần cung cấp timestamp thu ảnh thực và kiểm tra độ mới của ảnh.
+Không dùng ảnh topomap đã lấy mẫu 2 giây làm context thay cho ảnh quan sát liên tiếp.
+
+API của lõi nhận iterable `(timestamp_seconds, frame_BGR)`:
+
+```python
+from navigation.gnm import load_gnm
+from navigation.navigate import navigate
+
+model = load_gnm("checkpoints/gnm_large.pth", device="cuda")
+# localizer là PlaceRecognition được tạo một lần cho phiên; observations là ảnh mới có timestamp.
+for result in navigate(observations, localizer, model, max_v=0.10, max_w=0.60):
+    print(result["node"], result["subgoal"], result["v"], result["w"])
+```
+
+Context giữ 6 ảnh, bỏ qua timestamp trùng và từ chối timestamp lùi/NaN/Inf.
+Kết quả gồm node, posterior, subgoal, distance, toàn bộ waypoint, waypoint được chọn,
+`v`, `w`, `reached_goal` và thời gian xử lý. Tới đích theo điều kiện `node == goal`
+thì trả `(0, 0)` và kết thúc, không phát thêm dự đoán chuyển động.
+Đây chưa phải tiêu chí dừng đã kiểm chứng trên robot; posterior chưa có ngưỡng tin cậy.
+Lỗi ảnh/model/controller được báo lên bên gọi; bên điều khiển motor phải dừng khi lỗi.
+Lõi không mở camera/motor, không chạy watchdog và không tự đảm bảo nhịp 5 Hz.
+
+Kiểm tra CPU, không mở phần cứng:
+
+```sh
+uv run --no-sync python scripts/check_navigation.py
+```
+
+Script kiểm tra loader/checkpoint, thứ tự context, Bayesian, subgoal, scale,
+điều kiện goal và dữ liệu lỗi. Bài kiểm tra forward checkpoint thật được bỏ qua
+nếu chưa có `checkpoints/gnm_large.pth`.
 
 ## Waypoint normalized → vận tốc
 
