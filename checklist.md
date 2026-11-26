@@ -7,7 +7,8 @@ Checklist dành cho một người: làm lần lượt từ bước 1 đến bư
 Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/navigation/main.py`;
 Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây và giữ ảnh đầu/cuối.
 Đã có CosPlace + Bayesian và CLI thử định vị trên ảnh, không cần ROS/odometry.
-ROSBag, subgoal, waypoint và PD controller chưa triển khai; chưa hoàn thành luồng tự hành.
+Đã có hàm/CLI đổi waypoint normalized → `(v, w)`, chưa nối với predict hoặc motor.
+ROSBag, subgoal và luồng predict waypoint chưa triển khai; chưa hoàn thành luồng tự hành.
 
 ## 1. Chạy hai model trên Nano — kết quả
 
@@ -68,8 +69,8 @@ trên ảnh này; không tạo pose giả.
 
 ## 5. Nối waypoint với motor
 
-- [ ] Port phép đổi waypoint → `(v, w)` từ controller PlaceNav làm cơ sở.
-- [ ] Đối chiếu cách diễn giải/scale waypoint; không tự mặc định output là mét đã hiệu chỉnh cho JetBot.
+- [x] [Port hàm/CLI waypoint normalized → `(v, w)`](robot/src/navigation/pd_controller.py) từ controller PlaceNav, kiểm tra bằng dữ liệu mẫu; chưa nối motor.
+- [x] Đối chiếu checkpoint GNM Large tải từ README PlaceNav: shape `[1, 5, 4]`, `[x, y, cos_yaw, sin_yaw]`, x hướng trước/y hướng trái; áp dụng scale deployment GNM `max_v / frame_rate` cho x/y. Đây là scale điều khiển, chưa phải khoảng cách thực đã hiệu chỉnh cho JetBot.
 - [ ] Hiệu chỉnh `wheelbase`, `v_full`, chiều quay và giới hạn vận tốc.
 - [ ] Nối `(v, w)` → `SafetyLayer.filter()` → `JetMotors.drive()`.
 - [ ] Kiểm tra chiều quay và dừng khi kê bánh trước khi chạy dưới đất.

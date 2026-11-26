@@ -5,3 +5,4 @@ robot/topomaps/
 __pycache__/
 /PlaceNav/
 *.pth
+tests
