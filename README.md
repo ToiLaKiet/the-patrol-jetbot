@@ -186,6 +186,12 @@ uv run --no-sync python src/navigation/main.py \
 
 Teach mặc định mở camera và ghi dữ liệu. Đưa cần về giữa, thả L1 rồi giữ L1
 để lái; thả L1 để dừng, `Ctrl+C` để kết thúc và đóng tài nguyên.
+L1 mặc định là button 4. Với chế độ tay cầm đang báo L1 là button 6, dùng:
+
+```sh
+uv run --no-sync python src/teach/record_route.py --l1-button 6
+```
+
 Tạo topomap là bước riêng sau khi đóng phiên; thư mục map đích phải chưa tồn tại.
 Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/teach/README.md).
 

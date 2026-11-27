@@ -18,6 +18,10 @@ Chạy từ `robot/`:
 uv run --no-sync python src/teach/record_route.py --teach-dir teach
 ```
 
+L1 mặc định là button 4. Nếu tay cầm ở chế độ Pygame báo L1 là button 6,
+chạy `uv run --no-sync python src/teach/record_route.py --l1-button 6`.
+Đưa cần về giữa, thả L1 rồi giữ L1 để lái; kiểm tra lại mapping khi đổi chế độ.
+
 Mặc định ghi vào `teach/`. Giai đoạn hiện tại dùng [recorder.py](recorder.py),
 không phụ thuộc ROS. Sau khi kết thúc Teach, chạy bước tạo TOPOMAP riêng.
 

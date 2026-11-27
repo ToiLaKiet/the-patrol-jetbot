@@ -40,9 +40,16 @@ Ví dụ `slew_rate=0.5`, chu kỳ 0.02 s thì mỗi bước đổi tối đa 0.
 | `--max-duty` | 0.1 | Hữu hạn, trong (0, 1] |
 | `--deadzone` | 0.08 | Hữu hạn, trong [0, 1) |
 | `--slew-rate` | 0.5 | Hữu hạn, > 0 |
+| `--l1-button` | 4 | Chỉ số nguyên >= 0, nhỏ hơn số nút tay cầm |
 
 CLI, `PatrolJet.run_teleop()` và `Teleop()` cùng mặc định `max_duty=0.1`.
 `--max-speed` được giữ làm alias của `--max-duty` để lệnh cũ vẫn chạy.
+
+Nếu phép đo Pygame cho thấy L1 là button 6 (chế độ TGZ đã kiểm tra), chạy Teach
+với `--l1-button 6`. Các API `PatrolJet.run_teleop()` và `Teleop()` nhận
+`l1_button=6`. Tham số này áp dụng cho cả đọc trạng thái nút và xử lý sự kiện
+thả nút; vẫn phải thả L1 và đưa cần về giữa trước khi cho phép chạy.
+Trục điều khiển vẫn là axis 0/1. Đo lại mapping nếu đổi chế độ tay cầm.
 
 ## Dừng
 

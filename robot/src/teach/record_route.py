@@ -22,6 +22,8 @@ def main(argv=None):
                         help="Vùng chết joystick [0, 1) (mặc định: 0.08).")
     parser.add_argument("--slew-rate", type=float, default=0.5,
                         help="Mức thay đổi lệnh motor mỗi giây, > 0 (mặc định: 0.5).")
+    parser.add_argument("--l1-button", type=int, default=4,
+                        help="Chỉ số nút L1 từ Pygame, >= 0 (mặc định: 4).")
     parser.add_argument("--teach-dir", default="teach",
                         help="Thư mục lưu JPEG + CSV ở khoảng 5 Hz (mặc định: teach).")
     args = parser.parse_args(argv)
@@ -31,6 +33,8 @@ def main(argv=None):
         parser.error("--deadzone phải hữu hạn và trong khoảng [0, 1).")
     if not (math.isfinite(args.slew_rate) and args.slew_rate > 0):
         parser.error("--slew-rate phải hữu hạn và lớn hơn 0.")
+    if args.l1_button < 0:
+        parser.error("--l1-button phải là số nguyên >= 0.")
     return run(args)
 
 
@@ -41,7 +45,7 @@ def run(args):
     robot = PatrolJet("Patrol-01")
     try:
         robot.run_teleop(max_duty=args.max_duty, deadzone=args.deadzone,
-                         slew_rate=args.slew_rate, teach_dir=args.teach_dir)
+                         slew_rate=args.slew_rate, teach_dir=args.teach_dir, l1_button=args.l1_button)
     finally:
         robot.close()
 

@@ -27,7 +27,7 @@ class PatrolJet:
         else:
             self.motors.stop()
 
-    def run_teleop(self, max_duty=0.1, deadzone=0.08, slew_rate=0.5, teach_dir=None):
+    def run_teleop(self, max_duty=0.1, deadzone=0.08, slew_rate=0.5, teach_dir=None, l1_button=4):
         if teach_dir is not None:
             from teach.recorder import TeachRecorder
 
@@ -36,7 +36,7 @@ class PatrolJet:
             self.recorder.start()
         self.teleop = Teleop(
             self.motors, self.safety, max_duty=max_duty, deadzone=deadzone, slew_rate=slew_rate,
-            recorder=self.recorder,
+            recorder=self.recorder, l1_button=l1_button,
         )
         self.teleop.run()
 

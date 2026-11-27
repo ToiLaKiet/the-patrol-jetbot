@@ -8,10 +8,10 @@ from safety.safety import SafetyInput
 
 
 class Teleop:
-    L1_BUTTON = 4
-
     def __init__(self, motors, safety, max_duty=0.1, deadzone=0.08, slew_rate=0.5,
-                 recorder=None):
+                 recorder=None, l1_button=4):
+        if type(l1_button) is not int or l1_button < 0:
+            raise ValueError("L1 button index must be an integer >= 0")
         if not all(math.isfinite(x) for x in (max_duty, deadzone, slew_rate)):
             raise ValueError("Teleop parameters must be finite")
         if not (0 < max_duty <= 1 and 0 <= deadzone < 1 and slew_rate > 0):
@@ -22,6 +22,7 @@ class Teleop:
         self.max_duty = min(max_duty, motors.max_duty)
         self.deadzone = deadzone
         self.slew_rate = slew_rate
+        self.l1_button = l1_button
         self.safety_input = SafetyInput(
             now=0.0, last_cmd_t=0.0, need_localization=False, battery=None,
         )
@@ -83,12 +84,12 @@ class Teleop:
                 raise RuntimeError("Không tìm thấy tay cầm USB")
             controller = pygame.joystick.Joystick(0)
             controller.init()
-            if controller.get_numaxes() < 2 or controller.get_numbuttons() <= self.L1_BUTTON:
-                raise RuntimeError(f"Tay cầm không đủ axis 0/1 và button {self.L1_BUTTON}")
+            if controller.get_numaxes() < 2 or controller.get_numbuttons() <= self.l1_button:
+                raise RuntimeError(f"Tay cầm không đủ axis 0/1 và button {self.l1_button}")
             instance_id = controller.get_instance_id()
             print(f"Teleop: {controller.get_name()}, max_duty={self.max_duty:g}, "
                   f"deadzone={self.deadzone:g}, slew_rate={self.slew_rate:g}")
-            print(f"Đưa cần về giữa, thả L1/button {self.L1_BUTTON} rồi giữ L1 để chạy. Ctrl+C để thoát.")
+            print(f"Đưa cần về giữa, thả L1/button {self.l1_button} rồi giữ L1 để chạy. Ctrl+C để thoát.")
             print("Chưa giám sát pin. Thả L1 để dừng ngay.")
             clock = pygame.time.Clock()
             last_cmd_t = time.monotonic()
@@ -103,12 +104,12 @@ class Teleop:
                         continue
                     if event.type == pygame.JOYDEVICEREMOVED:
                         raise RuntimeError("Tay cầm đã ngắt kết nối")
-                    if event.type == pygame.JOYBUTTONUP and event.button == self.L1_BUTTON:
+                    if event.type == pygame.JOYBUTTONUP and event.button == self.l1_button:
                         released = True
                 if pygame.joystick.get_count() == 0:
                     raise RuntimeError("Tay cầm đã ngắt kết nối")
                 x, y = controller.get_axis(0), controller.get_axis(1)
-                enabled = bool(controller.get_button(self.L1_BUTTON)) and not released
+                enabled = bool(controller.get_button(self.l1_button)) and not released
                 now = time.monotonic()
                 left, right = self._command(x, y, enabled, now - last_cmd_t)
                 self.safety_input.last_cmd_t = last_cmd_t
