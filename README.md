@@ -200,6 +200,16 @@ uv run --no-sync python src/navigation/main.py \
   --min-posterior <nguong_da_kiem_tra_tren_tuyen>
 ```
 
+Ví dụ 
+```sh
+uv run --no-sync python src/navigation/main.py \
+  --live --topomap-dir topomaps/route_d \
+  --max-v 0.05 --max-w 0.40 --max-duty 0.10 \
+  --wheelbase 0.10 --v-full 0.50 \
+  --min-posterior 0.10 --startup-timeout 90 \
+  --command-timeout 5
+```
+
 Lệnh `--live` có thể làm bánh quay sau khi đủ 6 ảnh và posterior đạt ngưỡng.
 `Ctrl+C` dừng motor. Giới hạn tốc độ trên là ví dụ; kê bánh để kiểm tra chiều quay
 trước khi thử dưới đất. Sau lệnh hợp lệ đầu, waypoint quá hạn hoặc posterior dưới
