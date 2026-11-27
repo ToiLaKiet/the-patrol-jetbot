@@ -110,6 +110,7 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
         first_result_deadline = started + startup_timeout
         worker.start()
         last_result = None
+        startup_reason = None
         while True:
             try:
                 result = results.get(timeout=0.02)
@@ -119,8 +120,10 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
                 if isinstance(result, BaseException):
                     raise result
                 if result is None:
+                    if last_result is None:
+                        raise RuntimeError("Navigation kết thúc trước waypoint hợp lệ đầu tiên: "
+                                           + (startup_reason or "chưa có kết quả"))
                     return
-                last_result = result
 
             if warmed_up.is_set() and not camera_ready.is_set():
                 print("LIVE: mở camera sau warm-up; motor đang dừng.", flush=True)
@@ -140,29 +143,39 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
                     raise RuntimeError("CAMERA_LOST: callback frame đã dừng cập nhật; "
                                        "tuổi frame {:.2f}s, giới hạn {:.2f}s.".format(
                                            now - frame_time, safety.cfg.cmd_timeout))
-            if last_result is None:
-                if now > first_result_deadline:
-                    raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint đầu tiên sau {:.1f}s "
-                                       "({}).".format(startup_timeout, "map + context + inference"
-                                                     if camera_ready.is_set() else "warm-up"))
+            if last_result is None and now > first_result_deadline:
+                raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint hợp lệ đầu tiên sau {:.1f}s "
+                                   "({}); lý do gần nhất: {}.".format(
+                                       startup_timeout, "map + context + inference"
+                                       if camera_ready.is_set() else "warm-up", startup_reason or "chưa có kết quả"))
+            candidate = result if result is not None else last_result
+            if candidate is None:
                 continue
             state = SafetyInput(
-                now=time.monotonic(), last_cmd_t=last_result["timestamp"],
-                localized=last_result["posterior"] >= min_posterior,
+                now=time.monotonic(), last_cmd_t=candidate["timestamp"],
+                localized=candidate["posterior"] >= min_posterior,
                 need_camera=True, camera_ok=frame_time is not None,
                 battery=None,
             )
             # Check even zero commands so stale data cannot keep a session alive.
             reason = safety.check(state)
             if reason != "OK":
+                if last_result is None and reason in ("CMD_TIMEOUT", "LOCALIZATION_LOST"):
+                    motors.stop()
+                    startup_reason = reason
+                    print("LIVE: motor vẫn dừng; bỏ waypoint khởi động {} "
+                          "(tuổi {:.3f}s, posterior {:.4f}); chờ kết quả hợp lệ.".format(
+                              reason, state.now - state.last_cmd_t, candidate["posterior"]), flush=True)
+                    continue
                 raise RuntimeError("Dừng navigation: {} (tuổi waypoint {:.3f}s, giới hạn {:.3f}s; "
                                    "posterior {:.4f}, ngưỡng {:.4f}).".format(
                                        reason, state.now - state.last_cmd_t, safety.cfg.cmd_timeout,
-                                       last_result["posterior"], min_posterior))
+                                       candidate["posterior"], min_posterior))
             if result is not None:
                 v, w, reason = safety.filter(result["v"], result["w"], state)
                 if reason != "OK":
                     raise RuntimeError("Dừng navigation: " + reason)
+                last_result = result
                 if result["reached_goal"] or (v == 0 and w == 0):
                     motors.stop()
                 else:

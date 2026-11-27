@@ -101,16 +101,21 @@ Chỉ vòng chính được ghi motor: kiểm tra an toàn → `SafetyLayer.filt
 `--command-timeout` mặc định 1 giây, tính từ timestamp ảnh tạo waypoint;
 không gia hạn bằng việc gửi lại vận tốc cũ. `--startup-timeout` mặc định 30 giây
 cho warm-up; sau khi `camera.start()` trả về, thời hạn được đặt lại thành
-30 giây để nhận callback đầu tiên, chuẩn bị map, gom context và chờ waypoint đầu.
+30 giây để nhận callback đầu tiên, chuẩn bị map, gom context và chờ waypoint hợp lệ đầu.
 Log ghi riêng thời gian mở camera; thời gian mở driver không trừ vào ngân sách
 chờ frame/waypoint đầu. Motor vẫn dừng trong giai đoạn này.
 Sau khi có callback đầu tiên, ảnh camera ngừng cập nhật bị chặn theo `--command-timeout`,
 và waypoint đầu tiên vẫn phải mới trong giới hạn đó trước khi được gửi tới motor.
+Trong lúc chờ waypoint hợp lệ đầu, kết quả quá hạn hoặc posterior dưới ngưỡng
+được bỏ qua; motor tiếp tục dừng và chờ kết quả mới trong cùng ngân sách startup.
+Kết quả bị bỏ không gia hạn thời hạn này. Sau lệnh hợp lệ đầu tiên, waypoint quá
+hạn hoặc mất định vị làm dừng motor và kết thúc phiên như bình thường.
 Đây là ngưỡng dừng lỗi, không phải
 cam kết đạt 5 Hz; cần đo timing thực tế trên Nano.
 
-Phiên dừng khi callback camera ngừng, ảnh/waypoint quá hạn, context gián đoạn,
-posterior dưới ngưỡng, model/controller/motor báo lỗi, tới goal hoặc `Ctrl+C`.
+Phiên dừng khi callback camera ngừng, context gián đoạn, hết hạn startup,
+model/controller/motor báo lỗi, tới goal hoặc `Ctrl+C`. Sau lệnh hợp lệ đầu,
+ảnh/waypoint quá hạn hoặc posterior dưới ngưỡng cũng làm kết thúc phiên.
 Motor được dừng trước khi đóng camera. Điều kiện goal hiện vẫn là `node == goal`
 ở một quan sát, có thể dừng sớm do định vị sai.
 

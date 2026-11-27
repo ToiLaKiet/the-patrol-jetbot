@@ -202,11 +202,14 @@ uv run --no-sync python src/navigation/main.py \
 
 Lệnh `--live` có thể làm bánh quay sau khi đủ 6 ảnh và posterior đạt ngưỡng.
 `Ctrl+C` dừng motor. Giới hạn tốc độ trên là ví dụ; kê bánh để kiểm tra chiều quay
-trước khi thử dưới đất. Camera/waypoint quá hạn, model lỗi hoặc posterior dưới ngưỡng
-làm dừng phiên. Chưa có tránh vật cản, tiếp quản joystick hoặc watchdog phần cứng.
+trước khi thử dưới đất. Sau lệnh hợp lệ đầu, waypoint quá hạn hoặc posterior dưới
+ngưỡng làm dừng phiên. Camera ngừng cập nhật hoặc model lỗi cũng kết thúc phiên.
+Chưa có tránh vật cản, tiếp quản joystick hoặc watchdog phần cứng.
 Model warm-up trước khi mở camera. `--startup-timeout` mặc định 30 giây cho
 warm-up và thêm 30 giây chờ frame/waypoint đầu sau khi camera mở xong; motor
 còn dừng trong giai đoạn này. `--command-timeout` vẫn mặc định 1 giây để chặn ảnh/waypoint quá hạn.
+Waypoint khởi động quá hạn hoặc posterior dưới ngưỡng được bỏ qua khi motor
+còn dừng; chờ kết quả hợp lệ trong cùng ngân sách startup, không tăng giới hạn tuổi waypoint.
 Nếu báo `CAMERA_LOST`, kiểm tra riêng camera bằng
 `uv run --no-sync python scripts/check_camera.py` (không khởi tạo motor hoặc model).
 Xem [hướng dẫn Repeat](robot/src/navigation/README.md#repeat-trực-tiếp--motor).
