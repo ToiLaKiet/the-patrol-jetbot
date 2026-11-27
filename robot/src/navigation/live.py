@@ -124,7 +124,12 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
 
             if warmed_up.is_set() and not camera_ready.is_set():
                 print("LIVE: mở camera sau warm-up; motor đang dừng.", flush=True)
+                camera_open_started = time.monotonic()
                 camera.start()
+                # Warm-up and camera opening must not consume the first-frame budget.
+                first_result_deadline = time.monotonic() + startup_timeout
+                print("LIVE: camera mở sau {:.2f}s; chờ frame/waypoint đầu tối đa {:.1f}s.".format(
+                    time.monotonic() - camera_open_started, startup_timeout), flush=True)
                 camera_ready.set()
             frame_time = camera.last_frame_time
             now = time.monotonic()
@@ -138,7 +143,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
             if last_result is None:
                 if now > first_result_deadline:
                     raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint đầu tiên sau {:.1f}s "
-                                       "(warm-up + camera + map + context).".format(startup_timeout))
+                                       "({}).".format(startup_timeout, "map + context + inference"
+                                                     if camera_ready.is_set() else "warm-up"))
                 continue
             state = SafetyInput(
                 now=time.monotonic(), last_cmd_t=last_result["timestamp"],

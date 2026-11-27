@@ -100,8 +100,10 @@ Chỉ vòng chính được ghi motor: kiểm tra an toàn → `SafetyLayer.filt
 `JetMotors.drive()`. Vòng chính kiểm tra khoảng 20 ms một lần khi chờ inference.
 `--command-timeout` mặc định 1 giây, tính từ timestamp ảnh tạo waypoint;
 không gia hạn bằng việc gửi lại vận tốc cũ. `--startup-timeout` mặc định 30 giây
-cho warm-up, mở camera, nhận callback đầu tiên, chuẩn bị map, gom context và
-chờ waypoint đầu; motor vẫn dừng trong giai đoạn này.
+cho warm-up; sau khi `camera.start()` trả về, thời hạn được đặt lại thành
+30 giây để nhận callback đầu tiên, chuẩn bị map, gom context và chờ waypoint đầu.
+Log ghi riêng thời gian mở camera; thời gian mở driver không trừ vào ngân sách
+chờ frame/waypoint đầu. Motor vẫn dừng trong giai đoạn này.
 Sau khi có callback đầu tiên, ảnh camera ngừng cập nhật bị chặn theo `--command-timeout`,
 và waypoint đầu tiên vẫn phải mới trong giới hạn đó trước khi được gửi tới motor.
 Đây là ngưỡng dừng lỗi, không phải
