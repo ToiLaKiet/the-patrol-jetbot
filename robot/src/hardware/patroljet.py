@@ -6,11 +6,11 @@ from teleop.teleop import Teleop
 
 
 class PatrolJet:
-    def __init__(self, name: str):
+    def __init__(self, name: str, max_duty=0.4):
         self.name = name
 
         self.camera = JetCamera()
-        self.motors = JetMotors()
+        self.motors = JetMotors(duty=min(0.2, max_duty), max_duty=max_duty)
         self.safety = SafetyLayer()
         self.teleop = None
         self.recorder = None
@@ -49,3 +49,12 @@ class PatrolJet:
                     self.recorder.close()
             finally:
                 self.camera.stop()
+
+    def run_navigation(self, localizer, model, **options):
+        from navigation.live import run_live
+
+        try:
+            self.start()
+            return run_live(self.camera, self.motors, self.safety, localizer, model, **options)
+        finally:
+            self.stop()

@@ -2,7 +2,7 @@
 
 [main.py](main.py) chạy **định vị bằng CosPlace + Bayesian filter**. Thêm
 `--navigate` để nối **chọn subgoal → GNM predict waypoints → controller → `(v, w)`**
-trên chuỗi ảnh. Camera trực tiếp, safety và motor chưa được nối vào luồng này.
+trên chuỗi ảnh. `--live` chạy camera trực tiếp → navigation → safety → motor.
 
 | Phần | File | Trạng thái |
 | --- | --- | --- |
@@ -10,9 +10,10 @@ trên chuỗi ảnh. Camera trực tiếp, safety và motor chưa được nối
 | Place recognition | [place_recognition/](place_recognition/) | CosPlace/EfficientNet-B0 và Bayesian filter, không phụ thuộc ROS/odometry |
 | Lõi điều hướng Bayesian | [navigate.py](navigate.py) | Context 6 ảnh → node → subgoal → GNM → `(v, w)` |
 | Predict waypoints | [gnm.py](gnm.py) | Nạp GNM Large và chạy inference; không cần checkout PlaceNav hoặc gnm_train |
-| PD controller → `(v, omega)` | [pd_controller.py](pd_controller.py) | Đã nối với predict; chưa nối motor |
-| Safety | [safety.py](../safety/safety.py) | Đã có, chưa nối với Navigation |
-| `(v, omega)` → hai bánh | [motors.py](../hardware/motors.py) | Đã có `JetMotors.drive()`, chưa nối với Navigation |
+| PD controller → `(v, omega)` | [pd_controller.py](pd_controller.py) | Đã nối với predict và motor qua `--live` |
+| Repeat trực tiếp | [live.py](live.py) | Inference nền; vòng chính kiểm tra timeout và gửi motor |
+| Safety | [safety.py](../safety/safety.py) | `--live` kiểm tra tuổi ảnh/waypoint, posterior và giới hạn vận tốc |
+| `(v, omega)` → hai bánh | [motors.py](../hardware/motors.py) | `--live` gọi `JetMotors.drive()` với hiệu chỉnh bắt buộc |
 
 Chạy từ `robot/`:
 
@@ -48,7 +49,7 @@ khởi chạy; chưa có cache HDF5. Cả ảnh map và query dùng chung
 phỏng thời gian phát lại. Thử lại trên ảnh Teach chỉ là kiểm tra kết nối;
 đánh giá định vị cần ảnh của một lượt đi lại độc lập.
 
-Khi nối với camera JetBot sau này, tái sử dụng API:
+API định vị dùng lại cho camera JetBot:
 
 ```python
 from navigation.inference import PlaceRecognition
@@ -62,7 +63,56 @@ theo thứ tự thời gian để giữ trạng thái Bayesian. Các mặc đị
 `delta=10`, transition window `[-1, 2)`. Map một node/descriptor trùng được xử lý
 không sinh NaN; trường hợp không phân biệt được có thể trả phân bố đều.
 
-Lệnh này chưa khởi tạo camera hoặc motor. Chưa có chế độ tự hành hoạt động.
+Lệnh dùng `--query` không khởi tạo camera hoặc motor.
+
+## Repeat trực tiếp → motor
+
+Chạy từ `robot/`, dùng `--live` thay `--query`. Không cần thêm `--navigate`.
+Thay các giá trị `<...>` bằng số đã đo/kiểm tra, không gõ nguyên dấu ngoặc:
+
+```sh
+uv run --no-sync python src/navigation/main.py \
+  --live --topomap-dir topomaps/route_a \
+  --max-v 0.10 --max-w 0.60 --max-duty 0.10 \
+  --wheelbase <khoang_cach_hai_banh_m> \
+  --v-full <van_toc_banh_o_duty_1_m_s> \
+  --min-posterior <nguong_da_kiem_tra_tren_tuyen>
+```
+
+`wheelbase` tính bằng mét; `v_full` là vận tốc bánh ước lượng ở duty=1 theo
+mô hình tuyến tính của motor, có thể suy ra từ phép đo ở duty thấp.
+Không cần chạy bánh ở duty=1 để đo. `min_posterior` thuộc (0, 1], phải chọn bằng
+lượt đi lại độc lập; posterior cao vẫn có thể định vị sai. Các giới hạn vận tốc
+trên chỉ minh họa. Kê bánh kiểm tra chiều quay trước khi chạy dưới đất.
+
+Model và descriptor map được nạp trước khi mở phần cứng. `PatrolJet` quản lý
+camera/motor; motor đứng yên khi gom context 6 ảnh. Camera lấy timestamp monotonic
+từ callback frame mới, không làm mới timestamp khi đọc lại cùng frame. Timestamp
+này là lúc callback tới CPU, không phải lúc phơi sáng của cảm biến.
+
+Inference chạy ở thread nền, kết quả đi qua hàng đợi tối đa một phần tử.
+Chỉ vòng chính được ghi motor: kiểm tra an toàn → `SafetyLayer.filter()` →
+`JetMotors.drive()`. Vòng chính kiểm tra khoảng 20 ms một lần khi chờ inference.
+`--command-timeout` mặc định 1 giây, tính từ timestamp ảnh tạo waypoint;
+không gia hạn bằng việc gửi lại vận tốc cũ. Chưa có waypoint đầu tiên sau thời gian
+gom context cộng timeout cũng kết thúc phiên. Đây là ngưỡng dừng lỗi, không phải
+cam kết đạt 5 Hz; cần đo timing thực tế trên Nano.
+
+Phiên dừng khi callback camera ngừng, ảnh/waypoint quá hạn, context gián đoạn,
+posterior dưới ngưỡng, model/controller/motor báo lỗi, tới goal hoặc `Ctrl+C`.
+Motor được dừng trước khi đóng camera. Điều kiện goal hiện vẫn là `node == goal`
+ở một quan sát, có thể dừng sớm do định vị sai.
+
+Chưa giám sát pin, tránh vật cản hoặc tiếp quản joystick trong chế độ này.
+Watchdog Python không bảo vệ được khi toàn tiến trình/GIL/driver bị treo hoặc
+tiến trình bị kill cứng; cần watchdog phía motor cho trường hợp đó. Callback vẫn
+chạy nhưng lặp nội dung ảnh cũng chưa được phát hiện. Chưa kiểm chứng trên JetBot thật.
+
+Kiểm tra motor giả, camera giả và timeout:
+
+```sh
+uv run --no-sync python scripts/check_live_navigation.py
+```
 
 ## Bayesian + GNM → `(v, w)`
 

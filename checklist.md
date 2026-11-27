@@ -8,7 +8,8 @@ Hai entry point chạy độc lập: `src/teach/record_route.py` và `src/naviga
 Đã có tạo TOPOMAP từ JPEG/CSV, lấy mẫu theo timestamp mặc định 2 giây và giữ ảnh đầu/cuối.
 Đã có CosPlace + Bayesian, GNM loader và lõi `navigate()` tính `(v, w)` trên ảnh,
 không cần ROS/odometry. CLI `--navigate` đã nối node → subgoal → predict → controller.
-Camera Repeat, safety/motor và ROSBag chưa nối; chưa hoàn thành luồng tự hành.
+Đã nối camera Repeat → safety/motor qua `--live`, chưa kiểm chứng trên JetBot.
+ROSBag, tiếp quản joystick và watchdog phần cứng chưa triển khai.
 
 ## 1. Chạy hai model trên Nano — kết quả
 
@@ -39,8 +40,8 @@ Chưa xác nhận toàn pipeline camera/preprocessing/localization đạt 5 Hz h
 
 - [x] Frame JetCamera là **BGR**, shape `(224, 224, 3)`, dtype `uint8`; đã đối chiếu `assume_bgr.png` đúng màu vật thật.
 - [x] [Preprocessing dùng chung](robot/src/utils.py): BGR → RGB → tensor → resize rộng 85 × cao 64 (antialias) → normalize mean `[0.485, 0.456, 0.406]`, std `[0.229, 0.224, 0.225]`; output `float32 [3, 64, 85]`, dùng trong script inference.
-- [ ] Kiểm soát nhịp lấy context và timestamp; không coi frame lặp/quá hạn là ảnh mới. Code gốc thêm ảnh theo callback camera.
-- [x] Dùng cùng `preprocess_frame` cho ảnh topomap và query qua FeatureExtractor; chưa nối camera Repeat trực tiếp.
+- [x] `--live` lấy timestamp callback camera, lấy context theo nhịp mục tiêu, bỏ timestamp trùng và dừng khi quá hạn; chưa nhận biết callback có nội dung ảnh lặp.
+- [x] Dùng cùng `preprocess_frame` cho ảnh topomap/query và camera Repeat trực tiếp.
 
 ## 3. Tạo topomap từ phiên teach
 
@@ -69,18 +70,18 @@ trên ảnh này; không tạo pose giả.
 
 ## 5. Nối waypoint với motor
 
-- [x] [Port hàm/CLI waypoint normalized → `(v, w)`](robot/src/navigation/pd_controller.py) từ controller PlaceNav, kiểm tra bằng dữ liệu mẫu; chưa nối motor.
+- [x] [Port hàm/CLI waypoint normalized → `(v, w)`](robot/src/navigation/pd_controller.py) từ controller PlaceNav, kiểm tra bằng dữ liệu mẫu; đã nối motor qua `--live`, chưa thử phần cứng.
 - [x] Đối chiếu checkpoint GNM Large tải từ README PlaceNav: shape `[1, 5, 4]`, `[x, y, cos_yaw, sin_yaw]`, x hướng trước/y hướng trái; áp dụng scale deployment GNM `max_v / frame_rate` cho x/y. Đây là scale điều khiển, chưa phải khoảng cách thực đã hiệu chỉnh cho JetBot.
 - [ ] Hiệu chỉnh `wheelbase`, `v_full`, chiều quay và giới hạn vận tốc.
-- [ ] Nối `(v, w)` → `SafetyLayer.filter()` → `JetMotors.drive()`.
+- [x] Nối `(v, w)` → `SafetyLayer.filter()` → `JetMotors.drive()` trong `--live`; hiệu chỉnh phải nhập qua CLI.
 - [ ] Kiểm tra chiều quay và dừng khi kê bánh trước khi chạy dưới đất.
 
 ## 6. Tích hợp Repeat và dừng an toàn
 
-- [ ] Bổ sung chế độ tự hành trong entry point và vòng đời PatrolJet.
+- [x] Bổ sung `--live` trong entry point và `PatrolJet.run_navigation()`; chưa thử phần cứng.
 - [ ] Có một nơi quyết định lệnh motor giữa teleop và tự hành; joystick có thể tiếp quản hoặc dừng.
-- [ ] Watchdog theo tuổi ảnh/waypoint mới, không làm mới timeout bằng kết quả cũ. Controller gốc giữ vận tốc gần nhất nên cần bổ sung.
-- [ ] Dừng khi camera lỗi/đóng băng, inference lỗi/quá hạn hoặc mất định vị theo tiêu chí đã kiểm chứng.
+- [x] Vòng motor riêng với inference nền, timeout theo tuổi ảnh/waypoint mới; đã thử bằng camera/motor giả, chưa đo trên Nano.
+- [ ] Kiểm chứng dừng trên robot thật: code đã dừng khi callback camera ngừng, inference lỗi/quá hạn hoặc posterior dưới ngưỡng; ngưỡng còn cần hiệu chỉnh.
 - [ ] Xác nhận đến goal qua nhiều quan sát; dừng motor và đóng tài nguyên khi kết thúc hoặc exception.
 - [ ] Thử A → B ở tốc độ thấp có giám sát, ghi lỗi và độ trễ.
 

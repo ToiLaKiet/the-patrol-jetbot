@@ -5,9 +5,10 @@ import math
 from pathlib import Path
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -99,6 +100,31 @@ class NavigationChecks(unittest.TestCase):
     def test_lookahead_is_clamped_to_custom_goal(self):
         result = self.run_core(lookahead=10, goal_node_idx=1)[0]
         self.assertEqual(result["subgoal"], 1)
+
+    def test_live_camera_through_real_core_to_motor(self):
+        from navigation.live import run_live
+        from safety.safety import SafetyLayer
+
+        frame = self.observations(1)[0][1]
+
+        class Camera:
+            @property
+            def last_frame_time(self):
+                return time.monotonic()
+
+            def get_observation(self):
+                return time.monotonic(), frame.copy()
+
+        motors = Mock()
+        self.localizer.match.side_effect = [(0, 0.9), (2, 0.99)]
+        with patch("builtins.print"):
+            run_live(Camera(), motors, SafetyLayer(), self.localizer, self.model,
+                     max_v=0.1, max_w=0.6, wheelbase=0.1, v_full=0.5,
+                     min_posterior=0.7, frame_rate=20)
+        motors.drive.assert_called_once()
+        self.assertAlmostEqual(motors.drive.call_args[0][0], 0.03)
+        motors.stop.assert_called()
+        self.assertEqual(len(self.model.contexts), 1)
 
     def test_bad_observations_and_configuration(self):
         for observations in ([], self.observations(5),

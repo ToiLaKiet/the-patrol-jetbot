@@ -25,6 +25,12 @@ Teleop chỉ gọi `check()` rồi tự dừng motor khi bị chặn. Pin đang 
 nghĩa là chưa có nguồn đo; định vị không bắt buộc. Timeout chỉ được phát hiện
 khi vòng lặp gọi lại safety, không phải watchdog độc lập.
 
+Navigation `--live` gọi `check()`/`filter()` ở vòng chính trong khi inference
+chạy nền. Timeout dùng timestamp ảnh sinh ra waypoint, không dùng thời điểm
+gửi lại lệnh motor. Posterior dưới ngưỡng người chạy cung cấp gây
+`LOCALIZATION_LOST`; callback camera ngừng hoặc waypoint quá hạn làm kết thúc
+phiên và dừng motor. Pin vẫn là `None`; chưa có watchdog phía driver/phần cứng.
+
 Kết quả trả về khi an toàn là `"OK"`; khi đó `state="OK"`, `reason=""`.
 Khi chặn, `state="BLOCKED"` và `reason` giữ mã như `ESTOP`, `CMD_TIMEOUT`,
 `BATTERY_CRITICAL` hoặc `CAMERA_LOST`.

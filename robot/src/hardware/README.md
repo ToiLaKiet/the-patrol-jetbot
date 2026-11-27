@@ -4,7 +4,7 @@
 
 | File | Trách nhiệm |
 | --- | --- |
-| [patroljet.py](patroljet.py) | `PatrolJet` sở hữu camera, motor, safety, teleop và recorder |
+| [patroljet.py](patroljet.py) | `PatrolJet` sở hữu camera, motor, safety, teleop/Repeat và recorder |
 | [motors.py](motors.py) | `JetMotors` kiểm tra, giới hạn và gửi lệnh hai bánh |
 | [camera.py](camera.py) | `JetCamera` mở camera và trả bản sao frame mới nhất |
 
@@ -39,11 +39,18 @@ Teleop hiện tại gọi `set_motors()` trực tiếp.
 ở 224 × 224 mặc định. Nếu thiếu backend, báo lỗi kèm đường dẫn OpenCV
 để phân biệt bản `.venv` với bản hệ thống; không thay backend tự động.
 `get_frame()` kiểm tra camera đã mở, frame không rỗng, rồi trả `frame.copy()`.
-Không có timestamp từ cảm biến hoặc kiểm tra frame bị đóng băng.
+`get_observation()` trả `(timestamp_monotonic, frame.copy())`, hoặc `None` trước
+callback mới đầu tiên. `last_frame_time` là timestamp của callback mới nhất;
+đọc lại ảnh không cập nhật timestamp. Repeat dùng thông tin này để phát hiện
+callback ngừng. Chưa có timestamp từ cảm biến hoặc phát hiện nội dung ảnh lặp
+khi callback vẫn chạy.
 Camera CSI cần backend GStreamer; xem [cài đặt](../../README.md#khởi-tạo-trên-jetbot).
 
 Tạo `PatrolJet` khởi tạo và dừng motor, chưa mở camera.
+`max_duty` có thể truyền khi tạo; mặc định vẫn là 0.4, CLI Repeat chọn 0.1.
 `run_teleop()` dùng lại motor/safety hiện có. Nếu có `teach_dir`, nó gọi
 `start()` để mở camera, dừng motor rồi khởi động recorder trước teleop.
 `close()` dừng motor trước, chờ recorder đóng rồi đóng camera, kể cả khi
 đóng recorder báo lỗi.
+`run_navigation()` mở camera, dừng motor rồi gọi lõi Repeat; motor luôn được
+dừng khi lõi trả về hoặc báo lỗi. CLI gọi `close()` sau đó để đóng camera.

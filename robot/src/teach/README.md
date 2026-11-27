@@ -49,8 +49,8 @@ topomaps/route_a/
 ```
 
 Ảnh được kiểm tra đọc được rồi sao chép nguyên JPEG, không resize hoặc đổi màu.
-Map mới có tên ảnh số liên tiếp phù hợp loader của PlaceNav; navigation JetBot
-vẫn chưa triển khai. Không xuất pose giả hoặc `traj_data.pkl`.
+Map mới có tên ảnh số liên tiếp phù hợp loader của PlaceNav và
+[navigation JetBot](../navigation/README.md). Không xuất pose giả hoặc `traj_data.pkl`.
 Script từ chối thư mục đích đã tồn tại, CSV rỗng hoặc timestamp không hợp lệ;
 nếu lỗi ảnh/ghi đĩa thì xóa map đang tạo dở. Dữ liệu Teach gốc được giữ nguyên.
 

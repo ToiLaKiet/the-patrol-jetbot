@@ -17,6 +17,7 @@ flowchart TD
     Recorder --> Data["teach/run_.../ · JPEG + samples.csv"]
     Data --> Topomap["create_topomap.py → lấy mẫu 2 giây, giữ ảnh đầu/cuối"]
     Navigation --> Localization["Ảnh query + topomap → CosPlace + Bayesian → node và posterior"]
+    Navigation --> Live["--live: Camera → CosPlace + Bayesian → subgoal → GNM → controller → safety → motor"]
 ```
 
 ## Luồng đích theo PlaceNav
@@ -28,7 +29,7 @@ flowchart TD
 - **Navigation:** ảnh camera + TOPOMAP → inference/định vị → chọn subgoal →
   GNM predict waypoints → PD controller đổi sang `(v, omega)` → safety →
   `JetMotors.drive()`. Đã nối CosPlace + Bayesian → subgoal → GNM → `(v, w)`
-  trên chuỗi ảnh qua CLI `--navigate`; chưa nối camera/motor thành luồng tự hành.
+  trên chuỗi ảnh qua CLI `--navigate`; `--live` nối camera trực tiếp, safety và motor.
   Yêu cầu cập nhật waypoint
   của luồng tự hành là **5 Hz (200 ms/vòng)**.
 
@@ -188,8 +189,25 @@ Teach mặc định mở camera và ghi dữ liệu. Đưa cần về giữa, th
 Tạo topomap là bước riêng sau khi đóng phiên; thư mục map đích phải chưa tồn tại.
 Chi tiết lấy mẫu và giới hạn ở [hướng dẫn Teach](robot/src/teach/README.md).
 
+Chạy Repeat điều khiển motor từ camera, sau khi đo hiệu chỉnh trên JetBot.
+Thay ba giá trị trong dấu `<...>` bằng số thực của robot/tuyến; không gõ nguyên dấu ngoặc:
+
+```sh
+uv run --no-sync python src/navigation/main.py \
+  --live --topomap-dir topomaps/route_a \
+  --max-v 0.10 --max-w 0.60 --max-duty 0.10 \
+  --wheelbase <khoang_cach_hai_banh_m> --v-full <van_toc_banh_o_duty_1_m_s> \
+  --min-posterior <nguong_da_kiem_tra_tren_tuyen>
+```
+
+Lệnh `--live` có thể làm bánh quay sau khi đủ 6 ảnh và posterior đạt ngưỡng.
+`Ctrl+C` dừng motor. Giới hạn tốc độ trên là ví dụ; kê bánh để kiểm tra chiều quay
+trước khi thử dưới đất. Camera/waypoint quá hạn, model lỗi hoặc posterior dưới ngưỡng
+làm dừng phiên. Chưa có tránh vật cản, tiếp quản joystick hoặc watchdog phần cứng.
+Xem [hướng dẫn Repeat](robot/src/navigation/README.md#repeat-trực-tiếp--motor).
+
 ## Mã nguồn và tiến độ
 
 - [Teach](robot/src/teach/record_route.py): joystick và thu dữ liệu hiện tại.
-- [Navigation](robot/src/navigation/README.md): CosPlace + Bayesian trên ảnh, tùy chọn GNM → `(v, w)`; luồng tự hành chưa hoàn chỉnh.
+- [Navigation](robot/src/navigation/README.md): định vị trên ảnh, GNM → `(v, w)` hoặc `--live` điều khiển motor qua safety; chưa kiểm chứng tự hành trên phần cứng.
 - [Checklist](checklist.md): kết quả đã có và các bước triển khai tiếp theo.
