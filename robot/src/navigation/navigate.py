@@ -16,17 +16,22 @@ from .pd_controller import waypoint_to_velocity
 
 
 def navigate(observations, localizer, waypoint_model, max_v, max_w, frame_rate=5.0,
-             goal_node_idx=-1, lookahead=1, target_waypoint_idx=2):
+             goal_node_idx=-1, lookahead=1, target_waypoint_idx=2, max_context_gap=None):
     """Yield navigation results from (timestamp_seconds, BGR_frame) observations.
 
     Create the Bayesian localizer and GNM once per session. Timestamps must be
     finite and increase; duplicates are skipped. Six observations warm up GNM.
     Frames must already be sampled at the desired cadence. No camera or motor
     is opened here, and timestamps are not compared to a live clock.
+    max_context_gap discards the context after a gap and rebuilds it from new
+    frames; the live motor owner independently enforces command freshness.
     Goal detection follows PlaceNav's node equality and yields zero velocities.
     Errors propagate; any future motor caller must stop on errors and exit.
     """
     waypoint_to_velocity([0, 0], max_v, max_w, frame_rate)
+    if max_context_gap is not None and (not isinstance(max_context_gap, Real)
+                                       or not math.isfinite(max_context_gap) or max_context_gap <= 0):
+        raise ValueError("max_context_gap phải hữu hạn và > 0.")
     map_size = len(localizer.map_paths)
     if map_size == 0 or not isinstance(goal_node_idx, Integral) or not -1 <= goal_node_idx < map_size:
         raise ValueError("Goal index không hợp lệ hoặc topomap rỗng.")
@@ -50,7 +55,9 @@ def navigate(observations, localizer, waypoint_model, max_v, max_w, frame_rate=5
                 raise ValueError("Ảnh phải theo thứ tự timestamp tăng dần.")
             if timestamp == last_timestamp:
                 continue
-        # shortcut: check ordering only; add a capture-age watchdog before live motor use.
+            if max_context_gap is not None and timestamp - last_timestamp > max_context_gap:
+                context.clear()
+        # The live caller checks capture age against the monotonic clock.
         context.append(preprocess_frame(frame).unsqueeze(0))
         last_timestamp = timestamp
         if len(context) < context.maxlen:

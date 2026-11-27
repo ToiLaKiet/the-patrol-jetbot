@@ -110,10 +110,15 @@ Trong lúc chờ waypoint hợp lệ đầu, kết quả quá hạn hoặc poste
 được bỏ qua; motor tiếp tục dừng và chờ kết quả mới trong cùng ngân sách startup.
 Kết quả bị bỏ không gia hạn thời hạn này. Sau lệnh hợp lệ đầu tiên, waypoint quá
 hạn hoặc mất định vị làm dừng motor và kết thúc phiên như bình thường.
+Nếu hai ảnh đưa vào model cách nhau quá `--command-timeout`, context cũ bị
+xóa và phải gom đủ 6 ảnh mới trước khi dự đoán lại. Lúc khởi động, motor vẫn
+dừng trong khi gom lại context; quá trình này không gia hạn startup.
+Sau lệnh hợp lệ đầu, watchdog motor vẫn kiểm tra tuổi waypoint trong lúc worker
+gom ảnh. Callback camera ngừng cập nhật vẫn báo `CAMERA_LOST`.
 Đây là ngưỡng dừng lỗi, không phải
 cam kết đạt 5 Hz; cần đo timing thực tế trên Nano.
 
-Phiên dừng khi callback camera ngừng, context gián đoạn, hết hạn startup,
+Phiên dừng khi callback camera ngừng, hết hạn startup,
 model/controller/motor báo lỗi, tới goal hoặc `Ctrl+C`. Sau lệnh hợp lệ đầu,
 ảnh/waypoint quá hạn hoặc posterior dưới ngưỡng cũng làm kết thúc phiên.
 Motor được dừng trước khi đóng camera. Điều kiện goal hiện vẫn là `node == goal`
@@ -197,6 +202,8 @@ for result in navigate(observations, localizer, model, max_v=0.10, max_w=0.60):
 ```
 
 Context giữ 6 ảnh, bỏ qua timestamp trùng và từ chối timestamp lùi/NaN/Inf.
+Tham số API `max_context_gap` mặc định `None` cho replay; Repeat truyền giới hạn
+từ safety để bỏ context gián đoạn và gom lại ảnh mới.
 Kết quả gồm node, posterior, subgoal, distance, toàn bộ waypoint, waypoint được chọn,
 `v`, `w`, `reached_goal` và thời gian xử lý. Tới đích theo điều kiện `node == goal`
 thì trả `(0, 0)` và kết thúc, không phát thêm dự đoán chuyển động.

@@ -64,7 +64,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
             if time.monotonic() - timestamp > safety.cfg.cmd_timeout:
                 raise RuntimeError("CAMERA_LOST: ảnh camera quá hạn.")
             if last_timestamp is not None and timestamp - last_timestamp > safety.cfg.cmd_timeout:
-                raise RuntimeError("CAMERA_LOST: context bị gián đoạn.")
+                print("LIVE: khoảng cách ảnh {:.2f}s; bỏ context cũ, gom lại {} ảnh mới.".format(
+                    timestamp - last_timestamp, model.context_size + 1), flush=True)
             last_timestamp = timestamp
             next_sample = time.monotonic() + 1.0 / frame_rate
             yield timestamp, frame
@@ -94,7 +95,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
                 return
             print("LIVE: gom {} ảnh camera mới.".format(model.context_size + 1), flush=True)
             for result in navigate(observations(), localizer, model, max_v, max_w,
-                                   frame_rate, goal_node_idx, lookahead, target_waypoint_idx):
+                                   frame_rate, goal_node_idx, lookahead, target_waypoint_idx,
+                                   safety.cfg.cmd_timeout):
                 print("node={node} posterior={posterior:.4f} subgoal={subgoal} "
                       "v={v:.4f} w={w:.4f} goal={reached_goal} time_ms={time_ms:.1f} timings_ms={}".format(
                           result.get("timings_ms", {}), **result), flush=True)
