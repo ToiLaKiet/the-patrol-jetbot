@@ -116,6 +116,7 @@ class NavigationChecks(unittest.TestCase):
                 return time.monotonic(), frame.copy()
 
         motors = Mock()
+        self.localizer.extractor = Mock()
         self.localizer.match.side_effect = [(0, 0.9), (2, 0.99)]
         with patch("builtins.print"):
             run_live(Camera(), motors, SafetyLayer(), self.localizer, self.model,
@@ -124,7 +125,9 @@ class NavigationChecks(unittest.TestCase):
         motors.drive.assert_called_once()
         self.assertAlmostEqual(motors.drive.call_args[0][0], 0.03)
         motors.stop.assert_called()
-        self.assertEqual(len(self.model.contexts), 1)
+        self.assertEqual(len(self.model.contexts), 2)
+        self.localizer.extractor.assert_called_once()
+        self.assertEqual(self.localizer.match.call_count, 2)
 
     def test_bad_observations_and_configuration(self):
         for observations in ([], self.observations(5),

@@ -37,6 +37,8 @@ def main(argv=None):
     parser.add_argument("--max-duty", type=float, default=0.1, help="Giới hạn duty khi --live (mặc định 0.1).")
     parser.add_argument("--min-posterior", type=float, help="Ngưỡng posterior đã thử trên tuyến, bắt buộc khi --live.")
     parser.add_argument("--command-timeout", type=float, default=1.0, help="Tuổi ảnh/waypoint tối đa khi --live (giây).")
+    parser.add_argument("--startup-timeout", type=float, default=30.0,
+                        help="Thời gian chờ warm-up/map/context và waypoint đầu khi --live (giây, mặc định 30).")
     args = parser.parse_args(argv)
     if (args.navigate or args.live) and (args.max_v is None or args.max_w is None):
         parser.error("--navigate/--live cần --max-v và --max-w.")
@@ -45,7 +47,8 @@ def main(argv=None):
             if getattr(args, name) is None:
                 parser.error("--live cần --" + name.replace("_", "-"))
         if (not all(math.isfinite(x) and x > 0 for x in (
-                args.wheelbase, args.v_full, args.command_timeout, args.max_duty, args.min_posterior))
+                args.wheelbase, args.v_full, args.command_timeout, args.startup_timeout,
+                args.max_duty, args.min_posterior))
                 or args.max_duty > 1 or args.min_posterior > 1):
             parser.error("Hiệu chỉnh/timeout phải hữu hạn và > 0; duty/posterior <= 1.")
     try:
@@ -79,6 +82,7 @@ def run(args):
                 wheelbase=args.wheelbase, v_full=args.v_full, min_posterior=args.min_posterior,
                 frame_rate=args.frame_rate, goal_node_idx=args.goal_node_idx,
                 lookahead=args.lookahead, target_waypoint_idx=args.target_waypoint_idx,
+                startup_timeout=args.startup_timeout,
             )
         finally:
             robot.close()

@@ -36,11 +36,44 @@ class LiveNavigationTests(unittest.TestCase):
         result.update(changes)
         return result
 
-    def run_live(self, predict):
-        with patch("navigation.navigate.navigate", side_effect=predict), patch("builtins.print"):
+    def run_live(self, predict, warmup=None, startup_timeout=0.15):
+        with patch("navigation.navigate.navigate", side_effect=predict), patch("builtins.print"), \
+                patch("navigation.live._warmup_models", side_effect=warmup):
             return run_live(self.camera, self.motors, self.safety, None, self.model,
                             max_v=0.2, max_w=0.8, wheelbase=0.1, v_full=0.5,
-                            min_posterior=0.7, frame_rate=100)
+                            min_posterior=0.7, frame_rate=100, startup_timeout=startup_timeout)
+
+    def test_slow_startup_keeps_motors_stopped_then_uses_fresh_frames(self):
+        def warmup(*args):
+            until = time.monotonic() + 0.12
+            while time.monotonic() < until:
+                self.camera.last_frame_time = time.monotonic()
+                self.motors.drive.assert_not_called()
+                threading.Event().wait(0.005)
+
+        def predict(*args):
+            self.camera.last_frame_time = time.monotonic()
+            yield self.result()
+            yield self.result(v=0, w=0, reached_goal=True)
+
+        self.run_live(predict, warmup=warmup, startup_timeout=0.5)
+        self.motors.drive.assert_called_once()
+
+    def test_stale_first_prediction_still_stops_with_long_startup_budget(self):
+        def predict(*args):
+            self.camera.last_frame_time = time.monotonic()
+            yield self.result(timestamp=time.monotonic() - 0.2)
+
+        with self.assertRaisesRegex(RuntimeError, "CMD_TIMEOUT"):
+            self.run_live(predict, startup_timeout=30)
+        self.motors.drive.assert_not_called()
+
+    def test_warmup_failure_stops_without_running_navigation(self):
+        predict = Mock()
+        with self.assertRaisesRegex(RuntimeError, "warmup failed"):
+            self.run_live(predict, warmup=RuntimeError("warmup failed"))
+        predict.assert_not_called()
+        self.motors.drive.assert_not_called()
 
     def test_goal_and_clipping_motor_commands_on_main_thread(self):
         def predict(*args):
@@ -179,12 +212,15 @@ class LiveNavigationTests(unittest.TestCase):
         with patch("navigation.main.run") as run, patch("sys.stderr"):
             for extra in (["--live"], ["--live", "--query", "images"],
                           ["--live"] + calibration + ["--max-duty", "nan"],
-                          ["--live"] + calibration + ["--command-timeout", "0"]):
+                          ["--live"] + calibration + ["--command-timeout", "0"],
+                          ["--live"] + calibration + ["--startup-timeout", "nan"],
+                          ["--live"] + calibration + ["--startup-timeout", "0"]):
                 with self.subTest(extra=extra), self.assertRaises(SystemExit):
                     main(base + extra)
             run.assert_not_called()
             main(base + ["--live"] + calibration)
             self.assertTrue(run.call_args[0][0].live)
+            self.assertEqual(run.call_args[0][0].startup_timeout, 30)
             main(["--topomap-dir", "map", "--query", "images"])
             self.assertFalse(run.call_args[0][0].live)
 

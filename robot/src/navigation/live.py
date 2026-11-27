@@ -9,9 +9,27 @@ from safety.safety import SafetyInput
 from .pd_controller import waypoint_to_velocity
 
 
+def _warmup_models(localizer, model):
+    """Initialize both forward paths on the inference thread without updating belief."""
+    import torch
+
+    from utils import preprocess_frame
+    from .inference import read_frame
+
+    frame = read_frame(localizer.map_paths[0])
+    localizer.extractor(frame)
+    device = next(model.parameters()).device
+    goal = preprocess_frame(frame).unsqueeze(0).to(device)
+    context = goal.repeat(1, model.context_size + 1, 1, 1)
+    with torch.no_grad():
+        distance, waypoints = model(context, goal)
+        if not torch.isfinite(distance).all().item() or not torch.isfinite(waypoints).all().item():
+            raise ValueError("Warm-up GNM trả NaN/Inf.")
+
+
 def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
              v_full, min_posterior, frame_rate=5.0, goal_node_idx=-1,
-             lookahead=1, target_waypoint_idx=2):
+             lookahead=1, target_waypoint_idx=2, startup_timeout=30.0):
     """Use a started camera; stop motors on goal, timeout, error or Ctrl+C.
 
     The caller owns camera cleanup. A daemon worker may finish late, but never
@@ -25,6 +43,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
         raise ValueError("wheelbase và v_full phải hữu hạn và > 0.")
     if not math.isfinite(min_posterior) or not 0 < min_posterior <= 1:
         raise ValueError("min_posterior phải hữu hạn và trong (0, 1].")
+    if not math.isfinite(startup_timeout) or startup_timeout <= 0:
+        raise ValueError("startup_timeout phải hữu hạn và > 0.")
     stopped = threading.Event()
     results = Queue(maxsize=1)
 
@@ -57,6 +77,13 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
 
     def infer():
         try:
+            warmup_started = time.monotonic()
+            print("LIVE: warm-up CosPlace + GNM; motor đang dừng.", flush=True)
+            _warmup_models(localizer, model)
+            if stopped.is_set():
+                return
+            print("LIVE: warm-up xong sau {:.2f}s; gom {} ảnh camera mới.".format(
+                time.monotonic() - warmup_started, model.context_size + 1), flush=True)
             for result in navigate(observations(), localizer, model, max_v, max_w,
                                    frame_rate, goal_node_idx, lookahead, target_waypoint_idx):
                 publish(result)
@@ -71,7 +98,7 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
     worker = threading.Thread(target=infer, daemon=True)
     try:
         started = time.monotonic()
-        first_result_deadline = started + (model.context_size + 1) / frame_rate + safety.cfg.cmd_timeout
+        first_result_deadline = started + startup_timeout
         worker.start()
         last_result = None
         while True:
@@ -93,7 +120,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
                 raise RuntimeError("CAMERA_LOST: camera không có ảnh mới.")
             if last_result is None:
                 if now > first_result_deadline:
-                    raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint đầu tiên.")
+                    raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint đầu tiên sau {:.1f}s "
+                                       "(warm-up + map + context).".format(startup_timeout))
                 continue
             state = SafetyInput(
                 now=time.monotonic(), last_cmd_t=last_result["timestamp"],

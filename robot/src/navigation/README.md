@@ -86,7 +86,11 @@ lượt đi lại độc lập; posterior cao vẫn có thể định vị sai. 
 trên chỉ minh họa. Kê bánh kiểm tra chiều quay trước khi chạy dưới đất.
 
 Model và descriptor map được nạp trước khi mở phần cứng. `PatrolJet` quản lý
-camera/motor; motor đứng yên khi gom context 6 ảnh. Camera lấy timestamp monotonic
+camera/motor; motor đứng yên khi warm-up và gom context 6 ảnh. CosPlace và GNM
+được chạy warm-up trong chính thread inference trước khi gom ảnh camera;
+warm-up dùng ảnh map, không cập nhật Bayesian belief hoặc đưa ảnh vào context.
+Log in thời gian warm-up để phân biệt khởi động chậm với lỗi camera.
+Camera lấy timestamp monotonic
 từ callback frame mới, không làm mới timestamp khi đọc lại cùng frame. Timestamp
 này là lúc callback tới CPU, không phải lúc phơi sáng của cảm biến.
 
@@ -94,8 +98,11 @@ Inference chạy ở thread nền, kết quả đi qua hàng đợi tối đa m�
 Chỉ vòng chính được ghi motor: kiểm tra an toàn → `SafetyLayer.filter()` →
 `JetMotors.drive()`. Vòng chính kiểm tra khoảng 20 ms một lần khi chờ inference.
 `--command-timeout` mặc định 1 giây, tính từ timestamp ảnh tạo waypoint;
-không gia hạn bằng việc gửi lại vận tốc cũ. Chưa có waypoint đầu tiên sau thời gian
-gom context cộng timeout cũng kết thúc phiên. Đây là ngưỡng dừng lỗi, không phải
+không gia hạn bằng việc gửi lại vận tốc cũ. `--startup-timeout` mặc định 30 giây
+cho warm-up, chuẩn bị map, gom context và chờ waypoint đầu; motor vẫn dừng
+trong giai đoạn này. Ảnh camera ngừng cập nhật vẫn bị chặn theo `--command-timeout`,
+và waypoint đầu tiên vẫn phải mới trong giới hạn đó trước khi được gửi tới motor.
+Đây là ngưỡng dừng lỗi, không phải
 cam kết đạt 5 Hz; cần đo timing thực tế trên Nano.
 
 Phiên dừng khi callback camera ngừng, ảnh/waypoint quá hạn, context gián đoạn,
