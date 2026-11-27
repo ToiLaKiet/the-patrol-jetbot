@@ -246,8 +246,11 @@ uv run --no-sync python src/navigation/pd_controller.py \
 Kết quả: `v=0.090030 m/s, w=0.217337 rad/s`.
 
 Hàm xử lý quay tại chỗ khi `x` gần 0; tại gốc, waypoint 2D trả vận tốc 0,
-waypoint 4D dùng heading. Dữ liệu sai shape, NaN/Inf, heading bằng vector 0,
-tham số không hợp lệ hoặc waypoint phía sau (`x < 0`) gây `ValueError`.
+waypoint 4D dùng heading. Waypoint phía sau (`x < 0`) vẫn là đầu ra hợp lệ
+của model: controller giới hạn `v` về 0, giữ công thức tính `w` và giới hạn
+`max_w`, theo controller PlaceNav gốc; không phát lệnh lùi.
+Dữ liệu sai shape, NaN/Inf, heading bằng vector 0 hoặc tham số không hợp lệ
+gây `ValueError`.
 Bên sở hữu motor phải bắt lỗi và dừng; hàm không tự dừng motor hoặc chạy watchdog.
 Trước khi chạy thực tế cần nối qua `SafetyLayer.filter()` rồi `JetMotors.drive()`,
 kiểm tra tuổi ảnh/waypoint và hiệu chỉnh motor.

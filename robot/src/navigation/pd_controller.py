@@ -14,7 +14,8 @@ def waypoint_to_velocity(waypoint, max_v, max_w, frame_rate=5.0):
     x points forward; y and w are positive to the left. Position is scaled
     internally by max_v/frame_rate, following GNM deployment. Pass unscaled
     predictions, not metric coordinates. Limits must be calibrated for JetBot.
-    Raises ValueError for invalid input or a waypoint behind the robot;
+    Behind-robot waypoints clamp forward velocity to zero, following PlaceNav.
+    Raises ValueError for invalid input;
     the motor owner must stop on errors. This function has no watchdog.
     """
     if not all(isinstance(x, Real) and math.isfinite(x)
@@ -34,8 +35,6 @@ def waypoint_to_velocity(waypoint, max_v, max_w, frame_rate=5.0):
     if not valid:
         raise ValueError("Waypoint must be a flat sequence of 2 or 4 finite numbers")
 
-    if dx < 0:
-        raise ValueError("Waypoint is behind the robot")
     if len(waypoint) == 4 and waypoint[2] == 0 and waypoint[3] == 0:
         raise ValueError("Waypoint heading must have a nonzero direction")
 
@@ -59,7 +58,7 @@ def waypoint_to_velocity(waypoint, max_v, max_w, frame_rate=5.0):
         v = dx * frame_rate
         w = math.atan(dy / dx) * frame_rate
 
-    return min(v, max_v), max(-max_w, min(w, max_w))
+    return max(0.0, min(v, max_v)), max(-max_w, min(w, max_w))
 
 
 if __name__ == "__main__":
