@@ -23,7 +23,7 @@ class LiveNavigationTests(unittest.TestCase):
         self.motors = Mock()
         self.motors.drive.side_effect = self.check_owner
         self.motors.stop.side_effect = self.check_owner
-        self.camera = SimpleNamespace(last_frame_time=None, get_observation=Mock())
+        self.camera = SimpleNamespace(last_frame_time=None, get_observation=Mock(), start=Mock())
         self.safety = SafetyLayer(SafetyConfig(cmd_timeout=0.06, v_max=0.1, w_max=0.6))
         self.model = SimpleNamespace(context_size=0)
 
@@ -47,7 +47,7 @@ class LiveNavigationTests(unittest.TestCase):
         def warmup(*args):
             until = time.monotonic() + 0.12
             while time.monotonic() < until:
-                self.camera.last_frame_time = time.monotonic()
+                self.camera.start.assert_not_called()
                 self.motors.drive.assert_not_called()
                 threading.Event().wait(0.005)
 
@@ -57,6 +57,7 @@ class LiveNavigationTests(unittest.TestCase):
             yield self.result(v=0, w=0, reached_goal=True)
 
         self.run_live(predict, warmup=warmup, startup_timeout=0.5)
+        self.camera.start.assert_called_once()
         self.motors.drive.assert_called_once()
 
     def test_stale_first_prediction_still_stops_with_long_startup_budget(self):
@@ -73,7 +74,31 @@ class LiveNavigationTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "warmup failed"):
             self.run_live(predict, warmup=RuntimeError("warmup failed"))
         predict.assert_not_called()
+        self.camera.start.assert_not_called()
         self.motors.drive.assert_not_called()
+
+    def test_camera_start_error_stops_and_does_not_predict(self):
+        self.camera.start.side_effect = RuntimeError("camera start failed")
+        predict = Mock()
+        with self.assertRaisesRegex(RuntimeError, "camera start failed"):
+            self.run_live(predict)
+        predict.assert_not_called()
+        self.motors.drive.assert_not_called()
+        self.motors.stop.assert_called()
+
+    def test_first_camera_callback_may_arrive_after_command_timeout(self):
+        def predict(*args):
+            until = time.monotonic() + 0.12
+            while time.monotonic() < until:
+                self.assertIsNone(self.camera.last_frame_time)
+                self.motors.drive.assert_not_called()
+                threading.Event().wait(0.005)
+            self.camera.last_frame_time = time.monotonic()
+            yield self.result()
+            yield self.result(v=0, w=0, reached_goal=True)
+
+        self.run_live(predict, startup_timeout=0.5)
+        self.motors.drive.assert_called_once()
 
     def test_goal_and_clipping_motor_commands_on_main_thread(self):
         def predict(*args):
@@ -224,7 +249,7 @@ class LiveNavigationTests(unittest.TestCase):
             main(["--topomap-dir", "map", "--query", "images"])
             self.assertFalse(run.call_args[0][0].live)
 
-    def test_patroljet_stops_and_closes_when_start_or_navigation_fails(self):
+    def test_patroljet_stops_and_closes_when_navigation_fails(self):
         path = Path(__file__).resolve().parents[1] / "src/hardware/patroljet.py"
         spec = importlib.util.spec_from_file_location("hardware.patroljet_under_test", path)
         module = importlib.util.module_from_spec(spec)
@@ -234,21 +259,39 @@ class LiveNavigationTests(unittest.TestCase):
         }
         with patch.dict(sys.modules, dependencies):
             spec.loader.exec_module(module)
-        for fails_at_start in (False, True):
-            robot = module.PatrolJet("test", max_duty=0.1)
-            if fails_at_start:
-                robot.camera.start.side_effect = RuntimeError("camera failed")
-            with patch("navigation.live.run_live", side_effect=RuntimeError("model failed")):
-                with self.subTest(start=fails_at_start), self.assertRaises(RuntimeError):
-                    try:
-                        robot.run_navigation(None, None)
-                    finally:
-                        robot.close()
-            robot.motors.stop.assert_called()
-            robot.camera.stop.assert_called()
+        robot = module.PatrolJet("test", max_duty=0.1)
+        with patch("navigation.live.run_live", side_effect=RuntimeError("model failed")):
+            with self.assertRaises(RuntimeError):
+                try:
+                    robot.run_navigation(None, None)
+                finally:
+                    robot.close()
+        robot.motors.stop.assert_called()
+        robot.camera.stop.assert_called()
 
 
 class CameraObservationTests(unittest.TestCase):
+    def test_camera_diagnostic_checks_updates_and_closes_on_failure(self):
+        path = Path(__file__).resolve().parent / "check_camera.py"
+        spec = importlib.util.spec_from_file_location("camera_diagnostic_under_test", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        frame = SimpleNamespace(shape=(224, 224, 3), dtype="uint8")
+        for healthy in (True, False):
+            camera = Mock(last_frame_time=4.9 if healthy else None)
+            camera.get_observation.side_effect = [(0.1, frame), (4.9, frame)] if healthy else [None, None]
+            dependency = SimpleNamespace(JetCamera=Mock(return_value=camera))
+            with self.subTest(healthy=healthy), patch.dict(sys.modules, {"hardware.camera": dependency}), \
+                    patch.object(module.time, "monotonic", side_effect=[0, 0.1, 4.9, 5.0, 5.1]), \
+                    patch.object(module.time, "sleep"), patch("builtins.print"):
+                if healthy:
+                    module.main()
+                else:
+                    with self.assertRaises(RuntimeError):
+                        module.main()
+            camera.start.assert_called_once()
+            camera.stop.assert_called_once()
+
     def test_camera_callback_timestamps_copies_and_cleanup(self):
         path = Path(__file__).resolve().parents[1] / "src/hardware/camera.py"
         spec = importlib.util.spec_from_file_location("camera_under_test", path)

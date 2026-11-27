@@ -30,7 +30,7 @@ def _warmup_models(localizer, model):
 def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
              v_full, min_posterior, frame_rate=5.0, goal_node_idx=-1,
              lookahead=1, target_waypoint_idx=2, startup_timeout=30.0):
-    """Use a started camera; stop motors on goal, timeout, error or Ctrl+C.
+    """Warm up, start camera, then stop motors on goal, timeout, error or Ctrl+C.
 
     The caller owns camera cleanup. A daemon worker may finish late, but never
     owns the motors. Timeout is measured from frame arrival, not result arrival.
@@ -46,6 +46,8 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
     if not math.isfinite(startup_timeout) or startup_timeout <= 0:
         raise ValueError("startup_timeout phải hữu hạn và > 0.")
     stopped = threading.Event()
+    warmed_up = threading.Event()
+    camera_ready = threading.Event()
     results = Queue(maxsize=1)
 
     def observations():
@@ -82,8 +84,15 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
             _warmup_models(localizer, model)
             if stopped.is_set():
                 return
-            print("LIVE: warm-up xong sau {:.2f}s; gom {} ảnh camera mới.".format(
-                time.monotonic() - warmup_started, model.context_size + 1), flush=True)
+            print("LIVE: warm-up xong sau {:.2f}s; chờ mở camera.".format(
+                time.monotonic() - warmup_started), flush=True)
+            warmed_up.set()
+            while not camera_ready.wait(0.02):
+                if stopped.is_set():
+                    return
+            if stopped.is_set():
+                return
+            print("LIVE: gom {} ảnh camera mới.".format(model.context_size + 1), flush=True)
             for result in navigate(observations(), localizer, model, max_v, max_w,
                                    frame_rate, goal_node_idx, lookahead, target_waypoint_idx):
                 publish(result)
@@ -113,15 +122,23 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
                     return
                 last_result = result
 
+            if warmed_up.is_set() and not camera_ready.is_set():
+                print("LIVE: mở camera sau warm-up; motor đang dừng.", flush=True)
+                camera.start()
+                camera_ready.set()
             frame_time = camera.last_frame_time
             now = time.monotonic()
-            if ((frame_time is None and now - started > safety.cfg.cmd_timeout)
-                    or (frame_time is not None and not 0 <= now - frame_time <= safety.cfg.cmd_timeout)):
-                raise RuntimeError("CAMERA_LOST: camera không có ảnh mới.")
+            if camera_ready.is_set():
+                if frame_time is None and now > first_result_deadline:
+                    raise RuntimeError("CAMERA_LOST: chưa nhận callback frame đầu tiên sau khi mở camera.")
+                if frame_time is not None and not 0 <= now - frame_time <= safety.cfg.cmd_timeout:
+                    raise RuntimeError("CAMERA_LOST: callback frame đã dừng cập nhật; "
+                                       "tuổi frame {:.2f}s, giới hạn {:.2f}s.".format(
+                                           now - frame_time, safety.cfg.cmd_timeout))
             if last_result is None:
                 if now > first_result_deadline:
                     raise RuntimeError("INFERENCE_TIMEOUT: chưa nhận được waypoint đầu tiên sau {:.1f}s "
-                                       "(warm-up + map + context).".format(startup_timeout))
+                                       "(warm-up + camera + map + context).".format(startup_timeout))
                 continue
             state = SafetyInput(
                 now=time.monotonic(), last_cmd_t=last_result["timestamp"],

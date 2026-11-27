@@ -54,7 +54,6 @@ class PatrolJet:
         from navigation.live import run_live
 
         try:
-            self.start()
             return run_live(self.camera, self.motors, self.safety, localizer, model, **options)
         finally:
             self.stop()

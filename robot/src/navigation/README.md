@@ -87,8 +87,9 @@ trên chỉ minh họa. Kê bánh kiểm tra chiều quay trước khi chạy d�
 
 Model và descriptor map được nạp trước khi mở phần cứng. `PatrolJet` quản lý
 camera/motor; motor đứng yên khi warm-up và gom context 6 ảnh. CosPlace và GNM
-được chạy warm-up trong chính thread inference trước khi gom ảnh camera;
+được chạy warm-up trong chính thread inference **trước khi mở camera**;
 warm-up dùng ảnh map, không cập nhật Bayesian belief hoặc đưa ảnh vào context.
+Vòng chính mở camera sau khi warm-up hoàn tất rồi mới cho phép gom context.
 Log in thời gian warm-up để phân biệt khởi động chậm với lỗi camera.
 Camera lấy timestamp monotonic
 từ callback frame mới, không làm mới timestamp khi đọc lại cùng frame. Timestamp
@@ -99,8 +100,9 @@ Chỉ vòng chính được ghi motor: kiểm tra an toàn → `SafetyLayer.filt
 `JetMotors.drive()`. Vòng chính kiểm tra khoảng 20 ms một lần khi chờ inference.
 `--command-timeout` mặc định 1 giây, tính từ timestamp ảnh tạo waypoint;
 không gia hạn bằng việc gửi lại vận tốc cũ. `--startup-timeout` mặc định 30 giây
-cho warm-up, chuẩn bị map, gom context và chờ waypoint đầu; motor vẫn dừng
-trong giai đoạn này. Ảnh camera ngừng cập nhật vẫn bị chặn theo `--command-timeout`,
+cho warm-up, mở camera, nhận callback đầu tiên, chuẩn bị map, gom context và
+chờ waypoint đầu; motor vẫn dừng trong giai đoạn này.
+Sau khi có callback đầu tiên, ảnh camera ngừng cập nhật bị chặn theo `--command-timeout`,
 và waypoint đầu tiên vẫn phải mới trong giới hạn đó trước khi được gửi tới motor.
 Đây là ngưỡng dừng lỗi, không phải
 cam kết đạt 5 Hz; cần đo timing thực tế trên Nano.
@@ -120,6 +122,17 @@ Kiểm tra motor giả, camera giả và timeout:
 ```sh
 uv run --no-sync python scripts/check_live_navigation.py
 ```
+
+Nếu báo `CAMERA_LOST`, kiểm tra stream độc lập, không khởi tạo motor hoặc model:
+
+```sh
+uv run --no-sync python scripts/check_camera.py
+```
+
+Script quan sát callback 5 giây, in số lần thấy timestamp mới, tuổi frame cuối
+và trạng thái thread capture (nếu backend cung cấp). Nó báo lỗi nếu không nhận
+được nhiều frame mới hoặc frame cuối quá hạn. Lỗi live phân biệt chưa nhận
+callback đầu tiên với callback đã ngừng cập nhật; không dùng lại ảnh cũ để bỏ qua lỗi.
 
 ## Bayesian + GNM → `(v, w)`
 

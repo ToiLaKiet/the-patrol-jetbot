@@ -52,5 +52,6 @@ Tạo `PatrolJet` khởi tạo và dừng motor, chưa mở camera.
 `start()` để mở camera, dừng motor rồi khởi động recorder trước teleop.
 `close()` dừng motor trước, chờ recorder đóng rồi đóng camera, kể cả khi
 đóng recorder báo lỗi.
-`run_navigation()` mở camera, dừng motor rồi gọi lõi Repeat; motor luôn được
-dừng khi lõi trả về hoặc báo lỗi. CLI gọi `close()` sau đó để đóng camera.
+`run_navigation()` gọi lõi Repeat: motor dừng → warm-up model trong worker →
+vòng chính mở camera → gom context và điều hướng. Motor luôn được dừng khi lõi
+trả về hoặc báo lỗi. CLI gọi `close()` sau đó để đóng camera.

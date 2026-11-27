@@ -38,7 +38,7 @@ def main(argv=None):
     parser.add_argument("--min-posterior", type=float, help="Ngưỡng posterior đã thử trên tuyến, bắt buộc khi --live.")
     parser.add_argument("--command-timeout", type=float, default=1.0, help="Tuổi ảnh/waypoint tối đa khi --live (giây).")
     parser.add_argument("--startup-timeout", type=float, default=30.0,
-                        help="Thời gian chờ warm-up/map/context và waypoint đầu khi --live (giây, mặc định 30).")
+                        help="Chờ warm-up/camera/map/context và waypoint đầu khi --live (giây, mặc định 30).")
     args = parser.parse_args(argv)
     if (args.navigate or args.live) and (args.max_v is None or args.max_w is None):
         parser.error("--navigate/--live cần --max-v và --max-w.")

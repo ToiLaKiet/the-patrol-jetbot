@@ -108,6 +108,9 @@ class NavigationChecks(unittest.TestCase):
         frame = self.observations(1)[0][1]
 
         class Camera:
+            def start(self):
+                pass
+
             @property
             def last_frame_time(self):
                 return time.monotonic()

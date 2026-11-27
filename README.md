@@ -204,8 +204,11 @@ Lệnh `--live` có thể làm bánh quay sau khi đủ 6 ảnh và posterior đ
 `Ctrl+C` dừng motor. Giới hạn tốc độ trên là ví dụ; kê bánh để kiểm tra chiều quay
 trước khi thử dưới đất. Camera/waypoint quá hạn, model lỗi hoặc posterior dưới ngưỡng
 làm dừng phiên. Chưa có tránh vật cản, tiếp quản joystick hoặc watchdog phần cứng.
-`--startup-timeout` mặc định 30 giây cho warm-up và waypoint đầu tiên khi motor
+Model warm-up trước khi mở camera. `--startup-timeout` mặc định 30 giây cho
+warm-up, mở camera và waypoint đầu tiên khi motor
 còn dừng; `--command-timeout` vẫn mặc định 1 giây để chặn ảnh/waypoint quá hạn.
+Nếu báo `CAMERA_LOST`, kiểm tra riêng camera bằng
+`uv run --no-sync python scripts/check_camera.py` (không khởi tạo motor hoặc model).
 Xem [hướng dẫn Repeat](robot/src/navigation/README.md#repeat-trực-tiếp--motor).
 
 ## Mã nguồn và tiến độ
