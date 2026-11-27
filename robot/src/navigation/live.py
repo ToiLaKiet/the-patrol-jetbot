@@ -95,10 +95,10 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
             print("LIVE: gom {} ảnh camera mới.".format(model.context_size + 1), flush=True)
             for result in navigate(observations(), localizer, model, max_v, max_w,
                                    frame_rate, goal_node_idx, lookahead, target_waypoint_idx):
-                publish(result)
                 print("node={node} posterior={posterior:.4f} subgoal={subgoal} "
-                      "v={v:.4f} w={w:.4f} goal={reached_goal} time_ms={time_ms:.1f}".format(
-                          **result), flush=True)
+                      "v={v:.4f} w={w:.4f} goal={reached_goal} time_ms={time_ms:.1f} timings_ms={}".format(
+                          result.get("timings_ms", {}), **result), flush=True)
+                publish(result)
             publish(None)
         except BaseException as error:
             publish(error)
@@ -155,7 +155,10 @@ def run_live(camera, motors, safety, localizer, model, max_v, max_w, wheelbase,
             # Check even zero commands so stale data cannot keep a session alive.
             reason = safety.check(state)
             if reason != "OK":
-                raise RuntimeError("Dừng navigation: " + reason)
+                raise RuntimeError("Dừng navigation: {} (tuổi waypoint {:.3f}s, giới hạn {:.3f}s; "
+                                   "posterior {:.4f}, ngưỡng {:.4f}).".format(
+                                       reason, state.now - state.last_cmd_t, safety.cfg.cmd_timeout,
+                                       last_result["posterior"], min_posterior))
             if result is not None:
                 v, w, reason = safety.filter(result["v"], result["w"], state)
                 if reason != "OK":

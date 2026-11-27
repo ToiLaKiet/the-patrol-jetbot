@@ -111,7 +111,8 @@ def run(args):
                 args.goal_node_idx, args.lookahead, args.target_waypoint_idx):
             chosen = result["chosen_waypoint"]
             print("t={timestamp:.3f} node={node} posterior={posterior:.4f} subgoal={subgoal} "
-                  "v={v:.6f} w={w:.6f} goal={reached_goal} time_ms={time_ms:.1f} waypoint={}".format(
+                  "v={v:.6f} w={w:.6f} goal={reached_goal} time_ms={time_ms:.1f} "
+                  "timings_ms={timings_ms} waypoint={}".format(
                       None if chosen is None else chosen.tolist(), **result), flush=True)
         return
 

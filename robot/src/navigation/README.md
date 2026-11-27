@@ -165,6 +165,15 @@ từ query đầu tiên sau khi đủ context, không dùng sliding window hoặ
 Ảnh topomap được tiền xử lý và giữ trên CPU; chỉ ảnh subgoal được chuyển tới device
 ở mỗi lần predict. Waypoint normalized đi thẳng vào controller, scale một lần bên trong.
 
+Log `--navigate` và `--live` còn có `timings_ms` để tìm bước chậm: `preprocess`
+là chuẩn bị frame context, `localize` gồm CosPlace và Bayesian, `batch` là ghép
+context/chuyển device, `gnm` gồm chuyển subgoal, forward, kiểm tra output và lấy
+kết quả về CPU, `controller` đổi waypoint thành vận tốc. Đây là thời gian từng
+bước trong pipeline, không phải benchmark forward GPU riêng.
+Nếu `CMD_TIMEOUT`, xem tuổi waypoint và thời gian từng bước; lệnh dự đoán in
+trước kiểm tra safety chưa có nghĩa motor đã nhận lệnh. Posterior dưới ngưỡng
+vẫn chặn motor ngay cả khi waypoint đủ mới.
+
 CLI đọc ảnh nhanh nhất có thể, dùng timestamp giả định `index / frame_rate`;
 không phát lại theo thời gian thực và không đọc `samples.csv`. Để đánh giá timing
 hoặc nối camera, cần cung cấp timestamp thu ảnh thực và kiểm tra độ mới của ảnh.

@@ -56,8 +56,12 @@ def navigate(observations, localizer, waypoint_model, max_v, max_w, frame_rate=5
         if len(context) < context.maxlen:
             continue
 
+        timings = {"preprocess": (time.perf_counter() - started) * 1000, "localize": 0.0,
+                   "batch": 0.0, "gnm": 0.0, "controller": 0.0}
         # The existing Bayesian match initializes its belief on the first query.
+        stage_started = time.perf_counter()
         node, posterior = localizer.match(frame)
+        timings["localize"] = (time.perf_counter() - stage_started) * 1000
         if not isinstance(node, Integral) or not 0 <= node < map_size:
             raise ValueError("Bayesian trả node ngoài topomap.")
         if not isinstance(posterior, Real) or not math.isfinite(posterior) or not 0 <= posterior <= 1:
@@ -67,7 +71,10 @@ def navigate(observations, localizer, waypoint_model, max_v, max_w, frame_rate=5
         distance = waypoints = chosen = None
         v, w = 0.0, 0.0
         if not reached_goal:
+            stage_started = time.perf_counter()
             model_context = torch.cat(list(context), dim=1).to(device)
+            timings["batch"] = (time.perf_counter() - stage_started) * 1000
+            stage_started = time.perf_counter()
             with torch.no_grad():
                 distance_tensor, prediction = waypoint_model(model_context, topomap[subgoal].to(device))
             if (tuple(distance_tensor.shape) != (1, 1)
@@ -77,14 +84,18 @@ def navigate(observations, localizer, waypoint_model, max_v, max_w, frame_rate=5
                 raise ValueError("GNM phải trả distance [1, 1] và waypoint [1, 5, 4] hữu hạn.")
             distance = distance_tensor[0, 0].item()
             waypoints = prediction[0].cpu().numpy()
+            timings["gnm"] = (time.perf_counter() - stage_started) * 1000
+            stage_started = time.perf_counter()
             chosen = waypoints[target_waypoint_idx]
             v, w = waypoint_to_velocity(chosen, max_v, max_w, frame_rate)
+            timings["controller"] = (time.perf_counter() - stage_started) * 1000
 
         yield {
             "timestamp": timestamp, "node": node, "posterior": posterior,
             "subgoal": subgoal, "distance": distance, "waypoints": waypoints,
             "chosen_waypoint": chosen, "v": v, "w": w, "reached_goal": reached_goal,
             "time_ms": (time.perf_counter() - started) * 1000,
+            "timings_ms": {name: round(value, 1) for name, value in timings.items()},
         }
         if reached_goal:
             return
